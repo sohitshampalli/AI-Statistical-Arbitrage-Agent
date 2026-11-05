@@ -1,0 +1,9 @@
+.venv/
+.uv-cache/
+.uv-python/
+.envrc
+.env
+data/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
