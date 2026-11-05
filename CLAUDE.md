@@ -7,3 +7,5 @@
 - Never call live trading endpoints. Paper trading only.
 - Never commit .env, API keys, or data/. Do not edit data/ or reports/ by hand.
 - Commit in small chunks with clear messages; never push without asking me.
+
+- Read docs/PROJECT_BRIEF.md at the start of every session. It is the source of truth.
