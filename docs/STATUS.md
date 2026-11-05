@@ -10,7 +10,7 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
 | Step | Commit | Status |
 |---|---|---|
 | 1. Synthetic pair simulator (data/synthetic.py) and tests | 1 | done |
-| 2. As-of helper and ADF wrapper (stats/unit_root.py) | 2 | not started |
+| 2. As-of helper and ADF wrapper (stats/unit_root.py) | 2 | done |
 | 3. OLS hedge ratio and Engle-Granger, both directions | 3 | not started |
 | 4. AR(1) fit, OU parameters and half-life | 4 | not started |
 | 5. Hypothesis property test across seeds | 5 | not started |
@@ -33,3 +33,9 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
 - statsmodels 0.15.0: `coint` returns a `CointResult` regardless of `return_results`;
   use its attributes `coint_t`, `pvalue`, `critical_values`.
 - pandas 3.1.1: `bdate_range` produces `datetime64[us]`, not ns.
+- ADF on a pure random walk at n = 2520 rejected 6.3 to 6.7 percent of the time at
+  a nominal 5 percent over 1000 seeds (0 to 999). A single fixed-seed levels test is
+  a lottery (seed 7 rejected at p = 0.0085), so levels behaviour is tested by
+  rejection rate across seeds 1000 to 1499 in a slow test.
+- Slow tests are skipped by default (`addopts = -m "not slow"`); run them with
+  `uv run pytest -q -m slow`.
