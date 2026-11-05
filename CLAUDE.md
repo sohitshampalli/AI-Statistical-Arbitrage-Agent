@@ -9,3 +9,4 @@
 - Commit in small chunks with clear messages; never push without asking me.
 
 - Read docs/PROJECT_BRIEF.md at the start of every session. It is the source of truth.
+- No emojis and no em dashes anywhere in the project (UI, docs, comments, commit messages).

@@ -52,3 +52,14 @@ yfinance is unofficial and personal-use only; cache to data/ and record source, 
 
 ## Working style
 Small commits with clear messages. Never push without asking. After each change run `uv run pytest -q` and `uv run ruff check` and show the output. If unsure, say so and ask. Never invent results, references or numbers; report only what a command actually printed.
+
+## Dashboard (Phase 4b, after the backtester)
+- Local web app, run with one command (`uv run statarb dashboard`), opening on localhost in the browser.
+- It only displays results produced by tested code in src/statarb_agent. It never computes statistics itself.
+- Pages: pair explorer, cointegration, backtest results, controls, agent memos, methodology and limitations.
+- Style: professional and minimal. One neutral palette plus one accent. Chart titles state the finding. Units and data sources are labelled.
+- Start with Streamlit or Dash. Reconsider FastAPI plus React only if the core is finished early.
+- Add a screenshot of each page to the README.
+
+## Style rules (whole project)
+- No emojis and no em dashes anywhere: UI text, README, docs, code comments, commit messages.
