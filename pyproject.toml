@@ -40,3 +40,12 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.3",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: long-running Monte Carlo calibration tests (deselect with -m \"not slow\")",
+]
+filterwarnings = [
+    "error::FutureWarning",
+]
