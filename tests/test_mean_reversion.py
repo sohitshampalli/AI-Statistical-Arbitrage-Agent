@@ -183,6 +183,13 @@ def test_ou_parameters_dt(dt: float) -> None:
     assert mu == 2.0  # mu does not depend on dt
 
 
+@pytest.mark.parametrize("b", [math.nan, math.inf, -math.inf])
+def test_ou_parameters_b_not_finite(b: float) -> None:
+    result = _ou_parameters(0.1, b, 1.0)
+    assert result[0] is False and result[1:4] == (None, None, None)
+    assert "not finite" in result[4]
+
+
 def test_explosive_series_is_not_mean_reverting() -> None:
     fit = fit_ar1(_noiseless_ar1(0.0, 1.01, 60, 1.0), ASOF)
     assert fit.b == pytest.approx(1.01, abs=1e-10)
@@ -276,6 +283,29 @@ def test_nan_before_asof_raises(true_spread: pd.Series) -> None:
     s.iloc[5] = np.nan
     with pytest.raises(ValueError):
         fit_ar1(s, true_spread.index[100])
+
+
+@pytest.mark.parametrize("value", [math.inf, -math.inf])
+@pytest.mark.parametrize("row", [0, 50, 99])  # 99 is the last row before asof
+def test_infinity_before_asof_raises(
+    true_spread: pd.Series, row: int, value: float
+) -> None:
+    s = true_spread.copy()
+    s.iloc[row] = value
+    with pytest.raises(ValueError, match="infinity"):
+        fit_ar1(s, true_spread.index[100])
+
+
+@pytest.mark.parametrize("value", [math.inf, -math.inf])
+@pytest.mark.parametrize("row", [100, 150])  # 100 is the asof row itself
+def test_infinity_at_or_after_asof_does_not_change_result(
+    true_spread: pd.Series, row: int, value: float
+) -> None:
+    asof = true_spread.index[100]
+    before = fit_ar1(true_spread, asof)
+    s = true_spread.copy()
+    s.iloc[row] = value
+    assert fit_ar1(s, asof) == before
 
 
 def test_constant_series_raises() -> None:

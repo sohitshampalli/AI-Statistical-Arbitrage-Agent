@@ -76,8 +76,12 @@ def _ou_parameters(
     Returns:
         (mean_reverting, theta, mu, half_life, reason). mean_reverting is True
         exactly when 0 < b < 1, with no tolerance around either end; otherwise
-        theta, mu and half_life are None and reason says why.
+        theta, mu and half_life are None and reason says why. A b that is NaN
+        or infinite is not mean-reverting. NaN must be caught first, because it
+        fails both comparisons below and would otherwise reach the OU formulas.
     """
+    if not math.isfinite(b):
+        return False, None, None, None, f"b = {b} is not finite: not mean-reverting"
     if b >= 1.0:
         return False, None, None, None, f"b = {b:.6g} >= 1: not mean-reverting"
     if b <= 0.0:
@@ -115,12 +119,14 @@ def fit_ar1(
 
     Raises:
         ValueError: If dt is invalid, for any reason rows_before raises
-            ValueError, or if the series before `asof` is constant, because
-            the regression is then singular.
+            ValueError, if the series before `asof` contains infinity, or if
+            it is constant, because the regression is then singular.
     """
     if not (math.isfinite(dt) and dt > 0):
         raise ValueError(f"dt must be finite and > 0, got {dt!r}")
     values = rows_before(spread, asof, min_obs=min_obs).to_numpy(dtype=float)
+    if np.isinf(values).any():
+        raise ValueError("spread before asof contains infinity")
     lagged = values[:-1]
     if np.ptp(lagged) == 0.0:
         raise ValueError("spread is constant before asof; the regression is singular")
