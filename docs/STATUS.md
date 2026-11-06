@@ -3,9 +3,9 @@
 Phase tracker. Update this file in the same commit as the work it describes.
 Gates are defined in docs/PROJECT_BRIEF.md.
 
-## Current phase: 1. Foundations
+## Current phase: 1. Foundations (gate passed, Phase 2 not started)
 
-Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
+Gate: code recovers true beta and half-life on synthetic data. Passed 2026-11-06.
 
 | Step | Commit | Status |
 |---|---|---|
@@ -13,7 +13,47 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
 | 2. As-of helper and ADF wrapper (stats/unit_root.py) | 2 | done |
 | 3. OLS hedge ratio and Engle-Granger, both directions | 3 | done |
 | 4. AR(1) fit, OU parameters and half-life | 4 | done |
-| 5. Hypothesis property test across seeds | 5 | not started |
+| 5. Hypothesis property test across seeds | 5 | done |
+
+## Phase 1 gate evidence
+
+All Phase 1 tests pass: `uv run pytest -q` and `uv run pytest -q -m slow`.
+
+Beta recovery:
+- `tests/test_hedge_ratio.py::test_beta_recovery`: error under 0.05 at T = 2520.
+- `tests/test_hedge_ratio.py::test_exact_recovery_without_spread`: exact with no spread.
+- `tests/test_properties.py::test_recovers_truth_across_seeds_and_parameters`: error
+  under 0.03 at T = 10,000, for beta in [0.5, 2] and half-life in [5, 15].
+
+Half-life recovery:
+- `tests/test_mean_reversion.py::test_half_life_strict_at_long_length`: relative error
+  under 0.20 at T = 10,000.
+- `tests/test_mean_reversion.py::test_half_life_loose_at_realistic_length`: relative
+  error under 0.35 at T = 2520.
+- `tests/test_mean_reversion.py::test_noiseless_ar1_is_recovered_exactly`: exact.
+- `tests/test_mean_reversion.py::test_recovers_phi_on_true_spread`: phi within 4
+  standard errors.
+- The same property test: relative error under 0.25 at T = 10,000.
+
+Look-ahead tests, each changing rows at or after asof:
+- `rows_before` and `paired_rows_before`: `tests/test_asof.py`.
+- `adf_test`: `tests/test_unit_root.py`.
+- `ols_hedge_ratio`: `tests/test_hedge_ratio.py`.
+- `engle_granger`: `tests/test_cointegration.py`.
+- `fit_ar1`: `tests/test_mean_reversion.py`.
+- `spread` has no asof because it estimates nothing;
+  `test_spread_row_t_depends_only_on_row_t` shows row t uses only row t.
+- `_ou_parameters` reads no data. The simulator generates data and reads none.
+
+This gate is an in-sample result on synthetic data. It says nothing about real pairs.
+
+## Open decisions
+
+- Phase 2 or 3: the AR(1) half-life is badly biased at T = 252, the formation window.
+  Median estimate on the true spread (seeds 5000 to 5999): 8.44 at true half-life 10,
+  19.37 at 32, 25.94 at 60. A time stop of about 3 estimated half-lives would fire too
+  early. Options: a fixed time stop in configs, a longer OU window, or half-life as a
+  diagnostic only.
 
 ## Later phases
 
@@ -37,6 +77,9 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
   a nominal 5 percent over 1000 seeds (0 to 999). A single fixed-seed levels test is
   a lottery (seed 7 rejected at p = 0.0085), so levels behaviour is tested by
   rejection rate across seeds 1000 to 1499 in a slow test.
+- Property test: 25 derandomized examples, about 14 s, marked slow. Over 500 measured
+  draws of its strategy no bound was reached; the closest was half-life relative
+  error 0.2000 against 0.25.
 - Slow tests are skipped by default (`addopts = -m "not slow"`); run them with
   `uv run pytest -q -m slow`.
 - `rows_before` clears the index `freq`. pandas derives `freq` from the whole index,
@@ -71,5 +114,6 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
   minimum of 64.33 on these seeds but touching the 51.0 seen on seeds 0 to 999; at
   half-life 60, 25.8 percent of fits exceeded 64.33. At T = 252, the formation
   window, the groups overlap heavily: random-walk median 38.41, 59.9 percent of seeds
-  under 50 bars, while true half-life 32 gives a median of 19.37. KO/PEP was reported
-  at about 32 days; that figure is not measured in this repo.
+  under 50 bars, while true half-life 32 gives a median of 19.37. KO/PEP half-life:
+  Graziano (2026), arXiv 2609.35359, section 2.2, in-sample estimate, about 31.9
+  trading days.
