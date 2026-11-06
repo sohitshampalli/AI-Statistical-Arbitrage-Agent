@@ -60,8 +60,8 @@ def test_levels_rejection_rate_across_seeds(report_line: Callable[[str], None]) 
       oversized, so the upper bound needs headroom above 5 percent.
     - With 500 seeds the binomial standard error at a true rate of 6.7 percent
       is about 1.1 percentage points, so 10 percent is about 3 standard errors
-      above the measured rate. A wrongly sized test (for example wrong critical
-      values or a misspecified regression) would show 20 percent or more.
+      above the measured rate. A wrongly sized test would reject far more often
+      than the nominal rate.
     - Lower bound 1.5 percent catches a degenerate test that never rejects.
 
     log_a's rate is reported but not asserted: its spread adds short-run
