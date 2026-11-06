@@ -11,3 +11,4 @@
 - Read docs/PROJECT_BRIEF.md at the start of every session. It is the source of truth.
 - Read docs/STATUS.md at the start of every session for the current phase and progress.
 - No emojis and no em dashes anywhere in the project (UI, docs, comments, commit messages).
+- Dashboard work (Phase 4b only): read docs/DASHBOARD_SPEC.md first and look at design/inspiration/ if present. Do not build dashboard code before the backtester gate passes.
