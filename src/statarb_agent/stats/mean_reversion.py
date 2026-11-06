@@ -17,9 +17,10 @@ rows, this is an in-sample fit. That is how the Phase 1 gate is defined; it is n
 an out-of-sample estimate.
 
 0 < b < 1 is a precondition for computing OU parameters, not evidence of mean
-reversion. On pure random walks b was below 1 in 95.9 percent of seeds at T = 2520
-(seeds 0 to 999), because the same downward bias pulls b under 1. Use the unit
-root and cointegration tests to decide whether a spread mean-reverts.
+reversion. On pure random walks at T = 2520 it held on 95.9 percent of seeds 0 to
+999 (959 of 1000) and on 95.1 percent of seeds 5000 to 5999 (951 of 1000), because
+the same downward bias pulls b under 1. Use the unit root and cointegration tests
+to decide whether a spread mean-reverts.
 """
 
 from __future__ import annotations

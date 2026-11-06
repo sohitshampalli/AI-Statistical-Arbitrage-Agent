@@ -122,8 +122,9 @@ def test_random_walk_half_life_is_long_or_undefined() -> None:
       half-life 60, 25.8 percent of fits exceed that minimum.
     - T = 252, the formation window: the groups overlap heavily. The random-walk
       median is 38.41, with 59.9 percent of seeds under 50 bars, while true
-      half-life 32 gives a median of 19.37. KO/PEP was reported at about 32 days;
-      that figure is not measured in this repo.
+      half-life 32 gives a median of 19.37. KO/PEP half-life: Graziano (2026),
+      arXiv 2609.35359, section 2.2, in-sample estimate, about 31.9 trading days.
+      That figure is cited, not measured in this repo.
     """
     df = simulate_cointegrated_pair(seed=SEED_RANDOM_WALK)
     fit = fit_ar1(df["log_b"], ASOF)

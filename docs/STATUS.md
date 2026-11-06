@@ -100,9 +100,10 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   In-sample pipeline, true half-life 10: mean relative error -3.3 percent at
   T = 2520 (400 seeds, worst +30.85 percent at seed 118) and -0.7 percent at
   T = 10,000 (200 seeds, worst +15.37 percent at seed 111).
-- 0 < b < 1 is necessary but not sufficient for mean reversion. Random walks
-  satisfied it on 951 of 1000 seeds at T = 2520 (seeds 5000 to 5999), because the
-  bias pulls b under 1. `mean_reverting=True` only means the OU formulas can be
+- 0 < b < 1 is necessary but not sufficient for mean reversion. Random walks at
+  T = 2520 satisfied it on 951 of 1000 seeds (seeds 5000 to 5999, 95.1 percent) and
+  on 959 of 1000 seeds (seeds 0 to 999, 95.9 percent), because the bias pulls b
+  under 1. `mean_reverting=True` only means the OU formulas can be
   computed. The screening decision belongs to the cointegration tests plus a
   half-life range, to be decided in Phase 2.
 - `_ou_parameters` returns mean_reverting=False for a non-finite b. Before this, a
