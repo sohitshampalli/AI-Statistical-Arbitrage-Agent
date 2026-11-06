@@ -12,7 +12,7 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
 | 1. Synthetic pair simulator (data/synthetic.py) and tests | 1 | done |
 | 2. As-of helper and ADF wrapper (stats/unit_root.py) | 2 | done |
 | 3. OLS hedge ratio and Engle-Granger, both directions | 3 | done |
-| 4. AR(1) fit, OU parameters and half-life | 4 | not started |
+| 4. AR(1) fit, OU parameters and half-life | 4 | done |
 | 5. Hypothesis property test across seeds | 5 | not started |
 
 ## Later phases
@@ -53,3 +53,23 @@ Gate: code recovers true beta and half-life on synthetic data. Not yet passed.
 - The rate at which either direction rejected was 8.7 percent on the calibration
   seeds and 10.2 percent on the test seeds, so both directions are always reported
   separately and never combined by taking the smaller p-value.
+- AR(1) half-life has a downward small-sample bias, documented and not corrected.
+  In-sample pipeline, true half-life 10: mean relative error -3.3 percent at
+  T = 2520 (400 seeds, worst +30.85 percent at seed 118) and -0.7 percent at
+  T = 10,000 (200 seeds, worst +15.37 percent at seed 111).
+- 0 < b < 1 is necessary but not sufficient for mean reversion. Random walks
+  satisfied it on 951 of 1000 seeds at T = 2520 (seeds 5000 to 5999), because the
+  bias pulls b under 1. `mean_reverting=True` only means the OU formulas can be
+  computed. The screening decision belongs to the cointegration tests plus a
+  half-life range, to be decided in Phase 2.
+- Implied half-life on those random walks at T = 2520: median 368.92, 5th percentile
+  119.76, minimum 64.33; under 100 bars on 2.1 percent of seeds and under 50 bars on
+  none. True spread at half-life 10: median 9.88, maximum 13.90.
+- That gap exists only because the true half-life is 10 and T is long, so a
+  half-life cap cannot replace the cointegration test. At T = 2520 the true spread
+  reached 51.01 at half-life 30 and 54.71 at half-life 32, below the random-walk
+  minimum of 64.33 on these seeds but touching the 51.0 seen on seeds 0 to 999; at
+  half-life 60, 25.8 percent of fits exceeded 64.33. At T = 252, the formation
+  window, the groups overlap heavily: random-walk median 38.41, 59.9 percent of seeds
+  under 50 bars, while true half-life 32 gives a median of 19.37. KO/PEP was reported
+  at about 32 days; that figure is not measured in this repo.

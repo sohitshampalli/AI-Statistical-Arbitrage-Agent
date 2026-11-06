@@ -19,7 +19,7 @@ Claude decides and explains; deterministic Python computes and enforces. No stat
 2. Engle-Granger: OLS p_A = alpha + beta * p_B + eps; ADF on residual with MacKinnon cointegration critical values (use statsmodels.tsa.stattools.coint, whose null is NO cointegration). Run both directions (A on B, B on A) and report both.
 3. Johansen (baskets of 3+): statsmodels coint_johansen; trace and max-eigenvalue statistics.
 4. Hedge ratio: static OLS from formation window; rolling OLS (past data only); later a Kalman filter with state (alpha_t, beta_t) following a random walk, observation p_A = [1, p_B] . theta + v. Write the Kalman filter by hand in numpy.
-5. Mean reversion: fit spread AR(1): S_t = a + b*S_{t-1} + e. theta = -ln(b)/dt, mu = a/(1-b), half-life = ln(2)/theta. Require 0 < b < 1, otherwise return "not mean-reverting".
+5. Mean reversion: fit spread AR(1): S_t = a + b*S_{t-1} + e. theta = -ln(b)/dt, mu = a/(1-b), half-life = ln(2)/theta. Require 0 < b < 1, otherwise return "not mean-reverting". 0 < b < 1 is necessary but not sufficient for mean reversion, so the screening decision belongs to the cointegration tests plus a half-life range, to be decided in Phase 2.
 6. Signal: z_t = (S_t - mu_hat_{t-1}) / sigma_hat_{t-1}, estimated only from data before t. Entry |z| > 2, exit |z| < 0.5, stop |z| > 4, time stop about 3 half-lives. Execute at the NEXT bar, never the signal bar.
 7. Metrics: annualised Sharpe (mean/std * sqrt(252)), max drawdown, Calmar, hit rate, turnover, cost drag, beta to SPY, Deflated Sharpe ratio (Bailey and Lopez de Prado 2014).
 
