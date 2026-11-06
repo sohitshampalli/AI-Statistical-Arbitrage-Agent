@@ -21,7 +21,8 @@ def rows_before[T: (pd.Series, pd.DataFrame)](
         min_obs: Minimum number of rows required before `asof`.
 
     Returns:
-        A new object of the same type holding only rows dated before `asof`.
+        A new object of the same type holding only rows dated before `asof`,
+        with index `freq` set to None (freq can depend on future rows).
 
     Raises:
         TypeError: If `obj` is not a Series or DataFrame or its index is not a
@@ -55,4 +56,29 @@ def rows_before[T: (pd.Series, pd.DataFrame)](
         )
     if past.isna().to_numpy().any():
         raise ValueError("data before asof contains NaN")
-    return past
+    # A DatetimeIndex `freq` is inferred from the whole index, so it can depend
+    # on rows at or after asof. Drop it so no part of the output does.
+    return past.set_axis(pd.DatetimeIndex(past.index, freq=None))
+
+
+def paired_rows_before(
+    a: pd.Series, b: pd.Series, asof: pd.Timestamp | str, *, min_obs: int = 1
+) -> tuple[pd.Series, pd.Series]:
+    """Apply rows_before to two legs and require identical dates afterwards.
+
+    The legs are never joined: if their dates before `asof` differ in any way
+    (a missing day, an extra day, a shifted day), this raises instead of
+    silently dropping rows. Dates at or after `asof` are not compared.
+
+    Raises:
+        ValueError: If the two legs have different dates before `asof`, or for
+            any reason rows_before raises ValueError.
+    """
+    past_a = rows_before(a, asof, min_obs=min_obs)
+    past_b = rows_before(b, asof, min_obs=min_obs)
+    if not past_a.index.equals(past_b.index):
+        raise ValueError(
+            "the two legs have different dates before asof "
+            f"({len(past_a)} vs {len(past_b)} rows); align them explicitly first"
+        )
+    return past_a, past_b
