@@ -174,6 +174,27 @@ def content_sha256(frame: pd.DataFrame) -> str:
     return digest.hexdigest()
 
 
+def describe_frame_change(before: pd.DataFrame, after: pd.DataFrame) -> str:
+    """Say how two frames differ, for error messages. Empty differences are skipped."""
+    parts: list[str] = []
+    if list(before.columns) != list(after.columns):
+        parts.append(f"columns {list(before.columns)} -> {list(after.columns)}")
+    else:
+        for col in before.columns:
+            if before[col].dtype != after[col].dtype:
+                parts.append(f"{col} dtype {before[col].dtype} -> {after[col].dtype}")
+    if before.index.dtype != after.index.dtype:
+        parts.append(f"index dtype {before.index.dtype} -> {after.index.dtype}")
+    if before.index.name != after.index.name:
+        parts.append(f"index name {before.index.name!r} -> {after.index.name!r}")
+    if len(before) != len(after):
+        parts.append(f"rows {len(before)} -> {len(after)}")
+    elif not parts:
+        same_index = before.index.equals(after.index)
+        parts.append("values differ" if same_index else "index labels differ")
+    return "; ".join(parts)
+
+
 def _file_sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as fh:
@@ -313,7 +334,10 @@ class SnapshotStore:
         content = content_sha256(back)
         if content != content_sha256(frame):
             path.unlink()
-            raise CacheIntegrityError("Parquet round trip changed the data")
+            raise CacheIntegrityError(
+                f"Parquet round trip changed the data for {key}: "
+                f"{describe_frame_change(frame, back)}"
+            )
 
         is_dated = isinstance(frame.index, pd.DatetimeIndex)
         entry = ManifestEntry(

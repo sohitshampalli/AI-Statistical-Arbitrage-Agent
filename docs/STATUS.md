@@ -11,7 +11,7 @@ Gate: all estimates use only data before their as-of date.
 |---|---|---|
 | 1. Study config, test-period lock, network guard for tests | 1 | done |
 | 2. Source interface, snapshot store and manifest | 2 | done |
-| 3. yfinance price source and total-return index | 3 | not started |
+| 3. yfinance price source and total-return index | 3 | done, live check pending |
 | 4. Calendar alignment and data checks | 4 | not started |
 | 5. Screen config, pair statistics and trial log | 5 | not started |
 | 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
@@ -139,6 +139,26 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   letters and digits joined by single "." or "-", at most 12 characters; "." is
   rewritten to "-" (brk.b becomes BRK-B). The store accepts only keys already in
   normalised form, so no key can hold a separator or "..".
+- Price source (`sources/prices.py`): stores Yahoo's frame as delivered by
+  `Ticker.history(auto_adjust=False, back_adjust=False, actions=True, repair=False,
+  keepna=False, rounding=False, prepost=False, interval="1d")`, except that dtypes
+  are converted to Parquet-safe ones (float64, int64 volume, microsecond index) when
+  no value changes; each conversion is written to the manifest notes. Signals use
+  `tr_close`, a forward-accumulated total-return index from Close, Dividends and
+  Capital Gains: row t uses only rows up to t, so a later dividend never revises it.
+  `load` cuts at asof before any value check or computation, and does not return
+  Yahoo's Adj Close (it embeds later dividends). A split after asof rescales every
+  earlier row of Yahoo's split-adjusted Close by one factor, a constant shift in
+  logs: the intercept moves, the hedge ratio and tests do not.
+- Live check, 2026-11-08, one approved KO download (2010-01-01 to 2022-01-01): the
+  download succeeded but the store refused to save it, because the content hash
+  changed across the Parquet write and read. The data was in a temporary folder and
+  is gone, so the exact dtype that changed is not known. Offline, a datetime64[s]
+  index reproduces the refusal (Parquet reads it back as [ms]), but pandas 3.1.1
+  gives [us] for yfinance's own conversion, so that is not confirmed as the cause.
+  Fixes: the store's error now names each dtype, column or row change, and fetch
+  converts to Parquet-safe types first. The live check has not been repeated; it
+  needs a new approval.
 - A fresh clone has manifest entries but no snapshot files. Reading one raises
   SnapshotMissingError naming the ticker and snapshot id and telling the user to
   run `statarb fetch`. README (commit 7) must say that a fresh download creates

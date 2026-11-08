@@ -410,3 +410,14 @@ def test_only_the_manifest_in_data_can_be_committed() -> None:
     assert _ignored("data/other.json")
     assert not _ignored("data/manifest.json")
     assert not _ignored("src/statarb_agent/data/synthetic.py")
+
+
+def test_round_trip_change_is_refused_and_explained(store: SnapshotStore) -> None:
+    """Parquet has no seconds unit, so a datetime64[s] index comes back as [ms].
+    The store must refuse such a frame and say what changed."""
+    frame = _frame()
+    frame.index = frame.index.as_unit("s")
+    with pytest.raises(CacheIntegrityError, match=r"index dtype datetime64\[s\]"):
+        _write(store, frame)
+    assert store.manifest.entries() == []
+    assert not any(p.is_file() for p in (store.root / "raw").rglob("*"))
