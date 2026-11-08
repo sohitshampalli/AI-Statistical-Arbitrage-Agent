@@ -16,9 +16,11 @@ import pytest
 
 from statarb_agent.study import (
     PREREGISTRATION_FILE,
+    STUDY_CONFIG,
     TEST_START,
     LockedPeriodError,
     StudyConfig,
+    UnlockEvidence,
     clip_end_to_open_period,
     drop_locked_rows,
     find_repo_root,
@@ -26,7 +28,9 @@ from statarb_agent.study import (
     load_study,
     preregistration_commit,
     require_before_test_period,
+    study_config_commit,
     to_date,
+    unlock_evidence,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -75,6 +79,24 @@ def _commit_prereg(repo: Path) -> None:
     (repo / PREREGISTRATION_FILE).write_text("plan\n")
     _git(repo, "add", PREREGISTRATION_FILE)
     _git(repo, "commit", "-q", "-m", "prereg")
+
+
+def _write_config(repo: Path, flag: bool) -> None:
+    path = repo / STUDY_CONFIG
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(VALID_YAML.replace("FLAG", "true" if flag else "false"))
+
+
+def _commit_config(repo: Path, flag: bool) -> None:
+    _write_config(repo, flag)
+    _git(repo, "add", STUDY_CONFIG.as_posix())
+    _git(repo, "commit", "-q", "-m", f"study config, flag {flag}")
+
+
+def _unlock(repo: Path) -> None:
+    """Every unlock condition: config committed with the flag, plan committed."""
+    _commit_config(repo, True)
+    _commit_prereg(repo)
 
 
 # Config ------------------------------------------------------------------
@@ -170,7 +192,7 @@ def test_not_a_git_repository_stays_locked(tmp_path: Path) -> None:
 
 
 def test_flag_and_committed_file_unlock(tmp_path: Path, repo: Path) -> None:
-    _commit_prereg(repo)
+    _unlock(repo)
     commit = preregistration_commit(repo)
     assert commit is not None and len(commit) == 40
     study = _study(tmp_path, True)
@@ -178,6 +200,104 @@ def test_flag_and_committed_file_unlock(tmp_path: Path, repo: Path) -> None:
     assert require_before_test_period("2023-06-30", study, repo) == pd.Timestamp(
         "2023-06-30"
     )
+
+
+# The committed study config -----------------------------------------------
+
+
+def test_committed_plan_without_committed_config_stays_locked(
+    tmp_path: Path, repo: Path
+) -> None:
+    """The flag in a config outside the repository is not enough."""
+    _commit_prereg(repo)
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_untracked_config_flag_stays_locked(tmp_path: Path, repo: Path) -> None:
+    _commit_prereg(repo)
+    _write_config(repo, True)
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_uncommitted_flag_stays_locked(tmp_path: Path, repo: Path) -> None:
+    """Committed as false, then set to true on disk without a commit."""
+    _commit_prereg(repo)
+    _commit_config(repo, False)
+    _write_config(repo, True)
+    assert study_config_commit(repo) is None
+    assert unlock_evidence(_study(tmp_path, True), repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_staged_flag_stays_locked(tmp_path: Path, repo: Path) -> None:
+    _commit_prereg(repo)
+    _commit_config(repo, False)
+    _write_config(repo, True)
+    _git(repo, "add", STUDY_CONFIG.as_posix())
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_committed_false_flag_stays_locked(tmp_path: Path, repo: Path) -> None:
+    _commit_prereg(repo)
+    _commit_config(repo, False)
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_config_edited_after_unlock_relocks(tmp_path: Path, repo: Path) -> None:
+    _unlock(repo)
+    assert is_test_period_unlocked(_study(tmp_path, True), repo)
+    path = repo / STUDY_CONFIG
+    path.write_text(path.read_text() + "# edited\n")
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_invalid_committed_config_stays_locked(tmp_path: Path, repo: Path) -> None:
+    _commit_prereg(repo)
+    path = repo / STUDY_CONFIG
+    path.parent.mkdir(parents=True)
+    path.write_text(VALID_YAML.replace("FLAG", "true").replace("2022-01-01", "2023-01-01"))
+    _git(repo, "add", STUDY_CONFIG.as_posix())
+    _git(repo, "commit", "-q", "-m", "bad config")
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_locked_study_object_stays_locked_even_if_repo_unlocks(
+    tmp_path: Path, repo: Path
+) -> None:
+    _unlock(repo)
+    assert unlock_evidence(_study(tmp_path, False), repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, False), repo)
+
+
+def test_unlock_evidence_records_both_commits(tmp_path: Path, repo: Path) -> None:
+    _commit_config(repo, True)
+    config_head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True,
+        check=True,
+    ).stdout.strip()
+    _commit_prereg(repo)
+    prereg_head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True,
+        check=True,
+    ).stdout.strip()
+    evidence = unlock_evidence(_study(tmp_path, True), repo)
+    assert evidence == UnlockEvidence(
+        preregistration_commit=prereg_head, study_config_commit=config_head
+    )
+    assert config_head != prereg_head
+
+
+def test_locked_message_names_both_files(tmp_path: Path, repo: Path) -> None:
+    with pytest.raises(LockedPeriodError) as info:
+        require_before_test_period("2022-06-01", _study(tmp_path, True), repo)
+    message = str(info.value)
+    assert PREREGISTRATION_FILE in message and str(STUDY_CONFIG) in message
+    assert "no uncommitted changes" in message
 
 
 # Guard: every form of asof ------------------------------------------------
@@ -233,7 +353,7 @@ def test_download_end_is_clipped_while_locked(tmp_path: Path, repo: Path) -> Non
     assert clip_end_to_open_period("2015-06-01", locked, repo) == pd.Timestamp(
         "2015-06-01"
     )
-    _commit_prereg(repo)
+    _unlock(repo)
     assert clip_end_to_open_period("2026-11-08", locked, repo) == pd.Timestamp(
         "2026-11-08"
     )
@@ -251,7 +371,7 @@ def test_rows_already_in_the_test_period_are_dropped(
     pd.testing.assert_frame_equal(kept, frame.loc[: "2021-12-31"])
     series = drop_locked_rows(frame["close"], study, repo)
     assert series.index.max() < TEST_START
-    _commit_prereg(repo)
+    _unlock(repo)
     pd.testing.assert_frame_equal(drop_locked_rows(frame, study, repo), frame)
 
 

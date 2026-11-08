@@ -8,9 +8,13 @@ compute on dates from TEST_START onward.
 TEST_START is a constant in code, not a config value, so it cannot be moved by
 editing a YAML file; load_study refuses a config that disagrees with it.
 
-The test period is unlocked only when both hold:
-- configs/study.yaml sets `test_period_unlocked: true`, and
+The test period is unlocked only when all of these hold:
+- the StudyConfig passed in sets `test_period_unlocked: true`;
+- configs/study.yaml in the repository is in the HEAD commit, has no staged or
+  unstaged changes, and sets `test_period_unlocked: true`;
 - PREREGISTRATION.md is in the HEAD commit and has no staged or unstaged changes.
+unlock_evidence returns the commit hashes of both files, so every unlock event
+can be logged with them.
 
 Limits: this protects the library paths that call it (the data sources and the
 CLI). It cannot stop a notebook that reads a Parquet file directly.
@@ -135,19 +139,20 @@ def _git(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def preregistration_commit(repo_root: Path) -> str | None:
-    """Hash of the last commit that changed PREREGISTRATION.md, if it is committed.
+def committed_clean_commit(repo_root: Path, relpath: str) -> str | None:
+    """Hash of the last commit that changed `relpath`, if it is committed and clean.
 
-    Returns None unless the file is in HEAD and has no staged or unstaged
-    changes. Any git failure (not a repository, git missing) also gives None.
+    `relpath` is relative to repo_root, with "/" separators. Returns None unless
+    the file exists, is in HEAD and has no staged or unstaged changes. Any git
+    failure (not a repository, git missing) also gives None.
     """
-    path = Path(repo_root) / PREREGISTRATION_FILE
+    path = Path(repo_root) / relpath
     if not path.is_file():
         return None
     try:
-        in_head = _git(repo_root, "cat-file", "-e", f"HEAD:{PREREGISTRATION_FILE}")
-        status = _git(repo_root, "status", "--porcelain", "--", PREREGISTRATION_FILE)
-        last = _git(repo_root, "log", "-1", "--format=%H", "--", PREREGISTRATION_FILE)
+        in_head = _git(repo_root, "cat-file", "-e", f"HEAD:{relpath}")
+        status = _git(repo_root, "status", "--porcelain", "--", relpath)
+        last = _git(repo_root, "log", "-1", "--format=%H", "--", relpath)
     except OSError:
         return None
     if in_head.returncode != 0 or status.returncode != 0 or status.stdout.strip():
@@ -156,16 +161,63 @@ def preregistration_commit(repo_root: Path) -> str | None:
     return commit if last.returncode == 0 and commit else None
 
 
+def preregistration_commit(repo_root: Path) -> str | None:
+    """Hash of the last commit that changed PREREGISTRATION.md, if committed and clean."""
+    return committed_clean_commit(repo_root, PREREGISTRATION_FILE)
+
+
+def study_config_commit(repo_root: Path) -> str | None:
+    """Hash of the last commit that changed configs/study.yaml, if it unlocks.
+
+    Returns None unless the file is committed and clean (as for
+    PREREGISTRATION.md), is a valid study config, and sets
+    `test_period_unlocked: true`. Because the file has no changes, its contents
+    on disk are the committed contents.
+    """
+    commit = committed_clean_commit(repo_root, STUDY_CONFIG.as_posix())
+    if commit is None:
+        return None
+    try:
+        committed = load_study(Path(repo_root) / STUDY_CONFIG)
+    except (OSError, ValueError, TypeError, yaml.YAMLError):
+        return None
+    return commit if committed.test_period_unlocked else None
+
+
+@dataclass(frozen=True)
+class UnlockEvidence:
+    """Why the test period is unlocked: the commits of the two files that unlock it.
+
+    Attributes:
+        preregistration_commit: Last commit that changed PREREGISTRATION.md.
+        study_config_commit: Last commit that changed configs/study.yaml.
+    """
+
+    preregistration_commit: str
+    study_config_commit: str
+
+
+def unlock_evidence(study: StudyConfig, repo_root: Path) -> UnlockEvidence | None:
+    """The commit hashes that unlock the test period, or None while it is locked."""
+    if not study.test_period_unlocked:
+        return None
+    config = study_config_commit(repo_root)
+    prereg = preregistration_commit(repo_root)
+    if config is None or prereg is None:
+        return None
+    return UnlockEvidence(preregistration_commit=prereg, study_config_commit=config)
+
+
 def is_test_period_unlocked(study: StudyConfig, repo_root: Path) -> bool:
-    """True only if the config flag is set and PREREGISTRATION.md is committed."""
-    return study.test_period_unlocked and preregistration_commit(repo_root) is not None
+    """True only if unlock_evidence finds both files committed and the flag set."""
+    return unlock_evidence(study, repo_root) is not None
 
 
 def _locked_message(what: str) -> str:
     return (
         f"Refused: {what} is in the test period (from {TEST_START.date()}), which is "
-        f"locked until {PREREGISTRATION_FILE} is committed and {STUDY_CONFIG} sets "
-        "test_period_unlocked: true."
+        f"locked until {PREREGISTRATION_FILE} is committed and {STUDY_CONFIG} is "
+        "committed with test_period_unlocked: true, both with no uncommitted changes."
     )
 
 

@@ -112,14 +112,22 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 ## Notes
 
 - Test-period lock (`statarb_agent.study`): TEST_START = 2022-01-01 is a code
-  constant; `configs/study.yaml` cannot move it. Unlocked only when the config flag
-  is true and PREREGISTRATION.md is in HEAD with no uncommitted changes. Locked,
+  constant; `configs/study.yaml` cannot move it. Unlocked only when all hold: the
+  StudyConfig in use sets the flag; `configs/study.yaml` is in HEAD with no staged
+  or unstaged changes and sets `test_period_unlocked: true`; PREREGISTRATION.md is
+  in HEAD with no staged or unstaged changes. Both files use the same check
+  (`committed_clean_commit`), so a flag set on disk but not committed keeps the
+  lock. `unlock_evidence` returns the commit hashes of both files; every unlock
+  event in the trial log (commit 5) records them. Locked,
   `require_before_test_period` refuses any asof after 2022-01-01 (exactly 2022-01-01
   is allowed, since it reads rows up to 2021-12-31), `clip_end_to_open_period` stops
   downloads at 2022-01-01, and `drop_locked_rows` removes test-period rows from data
   that already has them. It protects library paths only, not a notebook that reads
   Parquet directly. It is not in `rows_before`, because synthetic tests use dates
   up to about 2038.
+- The validation period (2018 to 2021) is blocked only in the CLI until Phase 3,
+  not in the library: `load` and the estimators accept any asof up to
+  TEST_START. The library lock covers the test period only.
 - Tests cannot reach the network: an autouse fixture in `tests/conftest.py` blocks
   sockets, DNS, and the curl_cffi and requests sessions unless a test is marked
   `network` (deselected by default). curl_cffi needs its own patch because it uses
