@@ -80,3 +80,21 @@ Small commits with clear messages. Never push without asking. After each change 
 - Portfolio construction with cvxpy: market and sector neutral, position limits, cost-aware.
 - Cost model: half-spread plus participation-based market impact, borrow fee, and dividends owed on shorts.
 - Same rules as everywhere: as-of on every estimator, walk-forward, trial log, Deflated Sharpe, untouched test period.
+
+## Any-pair analysis
+- The tool analyses any two US tickers the user names, not only the demo pairs. Demo pairs live in configs/pairs.yaml.
+- CLI: `uv run statarb analyse TICKER_A TICKER_B` (formation period by default).
+- Every pair analysed is appended to the trial log. User-chosen pairs are labelled exploratory (not pre-registered) in all outputs and on the dashboard.
+- Before analysis, check: enough history in the window, both listed throughout, no unexplained gaps. Otherwise refuse with a clear message.
+
+## Data sources roadmap (point in time)
+- Prices (Phase 2): yfinance, cached, with a manifest. Alpaca market data (free IEX feed) for live paper trading in Phase 6.
+- Filings (Phase 4 to 5): SEC EDGAR official APIs (submissions, filings, XBRL company facts). Declared User-Agent with a contact email, stay under the SEC rate limit, cache raw responses, store the acceptance timestamp.
+- Earnings: 8-K Item 2.02 press releases and exhibits from EDGAR. Call transcripts are out of scope (mostly paid).
+- News (Phase 5): one timestamped source chosen in Phase 4 (candidates: Alpaca News API, GDELT, Finnhub free tier). Check terms and limits before use.
+- Macro: FRED.
+- This overrides the EDGAR exclusion in "Out of scope for now" only for the filings and earnings releases listed here. The supply-chain graph and the Form 4 insider veto stay out of scope.
+- Every source lives in src/statarb_agent/sources/, caches raw responses in data/raw/, records source, URL, retrieval time and hash in the manifest, and only returns items timestamped before `asof`.
+- The agent reaches data only through our own MCP tools that take `asof`. Built-in web search and third-party data MCP servers are not allowed in backtests, because they return today's information.
+
+  They are allowed only in live forward runs, and every call is logged.
