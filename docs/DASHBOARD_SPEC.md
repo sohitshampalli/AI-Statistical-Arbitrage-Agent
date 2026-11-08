@@ -88,3 +88,15 @@ Loading: skeletons. Empty: explain the CLI command that produces the result. Err
 
 ## 13. Out of scope
 Live trading, order placement from the UI, user accounts, mobile layout, light theme, real-time streaming.
+
+## 14. Chart catalogue and 3D views
+- Single charting library: Plotly (2D and 3D). No second charting library.
+- 3D is used only where it shows something 2D cannot. Every 3D view has a 2D equivalent or a data table next to it and a toggle between them.
+- Parameter surface (entry z by exit z, coloured by net Sharpe, on validation data only): shows stability, never used to pick the maximum. Always label the number of trials behind it and the cost assumption. A 2D heatmap is the default view, with 3D as a toggle.
+- Price-space view: log price of A against log price of B with date as the third axis, plus the fitted hedge-ratio plane. Shows where the relationship drifts or breaks.
+- Rolling cointegration surface: Engle-Granger p-value by date and window length. Shows how fragile the finding is to the window choice.
+- Johansen basket view: three-asset 3D scatter with the stationary combination marked.
+- All other views stay 2D: equity curve with drawdown, spread and z-score with trade markers, cost sensitivity, Kalman beta over time, controls comparison.
+- Every 3D view supports rotate, zoom and hover with exact values, a reset-view button, and a text summary for accessibility. Camera animation is off by default and respects prefers-reduced-motion.
+- Check bundle size and load time; load 3D views lazily.
+- Same data rules as everywhere: every number comes from a stored result artifact produced by tested code, with provenance in the hover card.
