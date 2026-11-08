@@ -1,0 +1,15 @@
+# Study periods, from docs/PROJECT_BRIEF.md (Hard rules: Splits). End dates are
+# inclusive. test_start is fixed in code (statarb_agent.study.TEST_START); a
+# different value here is refused, not obeyed.
+#
+# The test period is used once. It unlocks only when test_period_unlocked is
+# true AND PREREGISTRATION.md is committed with no uncommitted changes.
+
+formation:
+  start: "2010-01-01"
+  end: "2017-12-31"
+validation:
+  start: "2018-01-01"
+  end: "2021-12-31"
+test_start: "2022-01-01"
+test_period_unlocked: false

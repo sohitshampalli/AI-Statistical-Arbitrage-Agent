@@ -3,9 +3,43 @@
 Phase tracker. Update this file in the same commit as the work it describes.
 Gates are defined in docs/PROJECT_BRIEF.md.
 
-## Current phase: 1. Foundations (gate passed, Phase 2 not started)
+## Current phase: 2. Real pairs (in progress)
 
-Gate: code recovers true beta and half-life on synthetic data. Passed 2026-11-06.
+Gate: all estimates use only data before their as-of date.
+
+| Step | Commit | Status |
+|---|---|---|
+| 1. Study config, test-period lock, network guard for tests | 1 | done |
+| 2. Source interface, snapshot store and manifest | 2 | not started |
+| 3. yfinance price source and total-return index | 3 | not started |
+| 4. Calendar alignment and data checks | 4 | not started |
+| 5. Screen config, pair statistics and trial log | 5 | not started |
+| 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
+| 7. Live download and demo run (needs approval) | 7 | not started |
+
+Decisions for Phase 2 (2026-11-08):
+- Manifest at `data/manifest.json`, committed; `.gitignore` becomes `/data/*` plus
+  `!/data/manifest.json`. Trial log at `trials/trials.jsonl`, committed.
+- SPY, from its own snapshot, is the reference trading calendar.
+- Demo pairs are labelled `case_study`, user-chosen pairs `exploratory`, V vs XOM
+  `control`, the simulated pair `synthetic`.
+- `analyse` downloads an uncached ticker and says so, naming the snapshot used;
+  `--offline` forbids downloads. Formation period only; the CLI refuses the
+  validation period until Phase 3.
+- Provisional screen: Engle-Granger p < 0.05 in both directions, half-life in
+  [1, 63] bars on the full formation window, both legs fail to reject ADF on levels
+  at 5 percent. Values are fixed only after measuring at the formation length.
+- Download start 2010-01-01. yfinance with repair=False; anomalies are flagged,
+  never fixed: absolute daily log return above 0.4, a dividend above 10 percent of
+  the close, runs of 5 or more identical closes.
+- Tickers are sanitised before any file path is built (uppercase letters, digits,
+  . and -, normalised to Yahoo's - form). Snapshots store a file hash and a content
+  hash, and both are verified on read.
+- Ask before the commit 3 network test and before the commit 7 live run.
+
+## Phase 1: Foundations (gate passed 2026-11-06)
+
+Gate: code recovers true beta and half-life on synthetic data.
 
 | Step | Commit | Status |
 |---|---|---|
@@ -55,11 +89,19 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   early. Options: a fixed time stop in configs, a longer OU window, or half-life as a
   diagnostic only.
 
+- Phase 3: a one-shot final-test command. The test period may be used once; how
+  that single run is triggered, logged and protected from repeats is decided in
+  Phase 3. Every unlock event and every test-period run will be recorded in the
+  trial log.
+- Phase 6: live paper trading needs a separate code path that the research lock
+  does not apply to, because it works on today's data. To be designed later; it
+  must not weaken the research lock.
+
 ## Later phases
 
 | Phase | Status |
 |---|---|
-| 2. Real pairs | not started |
+| 2. Real pairs | in progress |
 | 3. Backtester | not started |
 | 3b. Universe strategy | not started |
 | 4. Agent | not started |
@@ -69,6 +111,19 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 
 ## Notes
 
+- Test-period lock (`statarb_agent.study`): TEST_START = 2022-01-01 is a code
+  constant; `configs/study.yaml` cannot move it. Unlocked only when the config flag
+  is true and PREREGISTRATION.md is in HEAD with no uncommitted changes. Locked,
+  `require_before_test_period` refuses any asof after 2022-01-01 (exactly 2022-01-01
+  is allowed, since it reads rows up to 2021-12-31), `clip_end_to_open_period` stops
+  downloads at 2022-01-01, and `drop_locked_rows` removes test-period rows from data
+  that already has them. It protects library paths only, not a notebook that reads
+  Parquet directly. It is not in `rows_before`, because synthetic tests use dates
+  up to about 2038.
+- Tests cannot reach the network: an autouse fixture in `tests/conftest.py` blocks
+  sockets, DNS, and the curl_cffi and requests sessions unless a test is marked
+  `network` (deselected by default). curl_cffi needs its own patch because it uses
+  libcurl, not Python sockets, and yfinance uses it.
 - cvxpy is a Phase 3b dependency (portfolio construction). It is not installed;
   add it when Phase 3b starts.
 - statsmodels 0.15.0: call `adfuller(..., result_object=True)`; the tuple default is

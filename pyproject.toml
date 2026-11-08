@@ -18,6 +18,7 @@ dependencies = [
     "pyarrow>=26.0.1",
     "pydantic>=2.14.3",
     "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
     "scipy>=1.18.1",
     "statsmodels>=0.15.0",
     "typer>=0.27.3",
@@ -43,9 +44,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["-m", "not slow"]
+addopts = ["-m", "not slow and not network"]
 markers = [
     "slow: long-running Monte Carlo calibration tests (deselect with -m \"not slow\")",
+    "network: downloads live data; deselected by default, run only with approval",
 ]
 filterwarnings = [
     "error::FutureWarning",
