@@ -12,7 +12,7 @@ Gate: all estimates use only data before their as-of date.
 | 1. Study config, test-period lock, network guard for tests | 1 | done |
 | 2. Source interface, snapshot store and manifest | 2 | done |
 | 3. yfinance price source and total-return index | 3 | done, live check pending |
-| 4. Calendar alignment and data checks | 4 | not started |
+| 4. Calendar alignment and data checks | 4 | done |
 | 5. Screen config, pair statistics and trial log | 5 | not started |
 | 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
 | 7. Live download and demo run (needs approval) | 7 | not started |
@@ -159,6 +159,17 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   Fixes: the store's error now names each dtype, column or row change, and fetch
   converts to Parquet-safe types first. The live check has not been repeated; it
   needs a new approval.
+- Alignment (`data/alignment.py`): `align_pair` compares both series in
+  [start, asof) and by default refuses any date present in one only, listing the
+  dates. Dropping is allowed only up to `max_unmatched_days`, and every dropped
+  date is in the report. Nothing is joined or filled silently.
+- Data checks (`data/checks.py`), on rows in [start, asof) only, against SPY's
+  trading days. Fatal: enough_history, listed_throughout, no_missing_days,
+  no_extra_days. Flags, never fatal and never fixed: large_move (absolute daily
+  log return of close above 0.4), large_distribution (dividend plus capital gain
+  above 10 percent of the previous close), stale_closes (5 or more identical
+  consecutive closes). Flags go into the trial log (commit 5) and CLI output
+  (commit 6).
 - A fresh clone has manifest entries but no snapshot files. Reading one raises
   SnapshotMissingError naming the ticker and snapshot id and telling the user to
   run `statarb fetch`. README (commit 7) must say that a fresh download creates
