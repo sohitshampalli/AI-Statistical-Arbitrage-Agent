@@ -120,14 +120,13 @@ def fit_ar1(
 
     Raises:
         ValueError: If dt is invalid, for any reason rows_before raises
-            ValueError, if the series before `asof` contains infinity, or if
-            it is constant, because the regression is then singular.
+            ValueError (including NaN or infinity before `asof`), or if the
+            series before `asof` is constant, because the regression is then
+            singular.
     """
     if not (math.isfinite(dt) and dt > 0):
         raise ValueError(f"dt must be finite and > 0, got {dt!r}")
     values = rows_before(spread, asof, min_obs=min_obs).to_numpy(dtype=float)
-    if np.isinf(values).any():
-        raise ValueError("spread before asof contains infinity")
     lagged = values[:-1]
     if np.ptp(lagged) == 0.0:
         raise ValueError("spread is constant before asof; the regression is singular")

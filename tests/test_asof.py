@@ -94,6 +94,51 @@ def test_nan_before_asof_raises() -> None:
         rows_before(s, s.index[5])
 
 
+@pytest.mark.parametrize("value", [np.inf, -np.inf])
+@pytest.mark.parametrize("row", [0, 2, 4])  # 4 is the last row before asof
+def test_infinity_before_asof_raises(row: int, value: float) -> None:
+    s = _series()
+    s.iloc[row] = value
+    with pytest.raises(ValueError, match="infinity"):
+        rows_before(s, s.index[5])
+    df = pd.DataFrame({"a": _series(), "b": s})
+    with pytest.raises(ValueError, match="infinity"):
+        rows_before(df, s.index[5])
+
+
+@pytest.mark.parametrize("value", [np.inf, -np.inf])
+@pytest.mark.parametrize("row", [5, 8])  # 5 is the asof row itself
+def test_infinity_at_or_after_asof_does_not_change_result(
+    row: int, value: float
+) -> None:
+    s = _series()
+    asof = s.index[5]
+    before = rows_before(s, asof)
+    s.iloc[row] = value
+    pd.testing.assert_series_equal(rows_before(s, asof), before, check_exact=True)
+
+
+def test_infinity_check_skips_non_numeric_columns() -> None:
+    s = _series()
+    df = pd.DataFrame({"a": s, "label": ["x"] * len(s)})
+    pd.testing.assert_frame_equal(rows_before(df, s.index[5]), _nofreq(df.iloc[:5]))
+    df.loc[df.index[1], "a"] = np.inf
+    with pytest.raises(ValueError, match="infinity"):
+        rows_before(df, s.index[5])
+
+
+def test_paired_infinity_in_either_leg_raises() -> None:
+    a, b = _pair()
+    a_inf = a.copy()
+    a_inf.iloc[3] = np.inf
+    b_inf = b.copy()
+    b_inf.iloc[3] = -np.inf
+    with pytest.raises(ValueError, match="infinity"):
+        paired_rows_before(a_inf, b, a.index[6])
+    with pytest.raises(ValueError, match="infinity"):
+        paired_rows_before(a, b_inf, a.index[6])
+
+
 def test_unsorted_or_duplicate_index_raises() -> None:
     s = _series()
     with pytest.raises(ValueError):

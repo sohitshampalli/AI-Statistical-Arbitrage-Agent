@@ -114,6 +114,13 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   raises ValueError on infinity before asof. Before this, infinity in the last row
   before asof returned a fit with b = +/-inf, and in an earlier row it raised a
   statsmodels or numpy error instead of ValueError.
+- The infinity check now lives in `rows_before`, next to the NaN check, so every
+  estimator gets it and `fit_ar1` no longer has its own copy. Before this,
+  `ols_hedge_ratio` returned alpha = beta = inf when log_a contained infinity, and
+  `adf_test` and `engle_granger` raised statsmodels `MissingDataError` instead of
+  ValueError. Only the selected rows are checked, so infinity at or after asof
+  changes nothing; `tests/test_nonfinite_inputs.py` tests both through all four
+  estimators. Non-numeric DataFrame columns are not checked for infinity.
 - Implied half-life on those random walks at T = 2520: median 368.92, 5th percentile
   119.76, minimum 64.33; under 100 bars on 2.1 percent of seeds and under 50 bars on
   none. True spread at half-life 10: median 9.88, maximum 13.90.

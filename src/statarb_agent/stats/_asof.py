@@ -7,6 +7,7 @@ nothing at or after `asof` (values, NaNs, ordering) can change the result.
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 
@@ -28,7 +29,8 @@ def rows_before[T: (pd.Series, pd.DataFrame)](
         TypeError: If `obj` is not a Series or DataFrame or its index is not a
             DatetimeIndex, or if `asof` and the index disagree on time zone.
         ValueError: If the selected rows are fewer than `min_obs`, are not
-            strictly increasing in date, or contain NaN.
+            strictly increasing in date, or contain NaN or infinity. Only
+            numeric columns are checked for infinity.
     """
     if not isinstance(obj, (pd.Series, pd.DataFrame)):
         raise TypeError(
@@ -56,9 +58,18 @@ def rows_before[T: (pd.Series, pd.DataFrame)](
         )
     if past.isna().to_numpy().any():
         raise ValueError("data before asof contains NaN")
+    if _contains_infinity(past):
+        raise ValueError("data before asof contains infinity")
     # A DatetimeIndex `freq` is inferred from the whole index, so it can depend
     # on rows at or after asof. Drop it so no part of the output does.
     return past.set_axis(pd.DatetimeIndex(past.index, freq=None))
+
+
+def _contains_infinity(obj: pd.Series | pd.DataFrame) -> bool:
+    """True if any numeric value in `obj` is +inf or -inf. NaN is checked earlier."""
+    frame = obj.to_frame() if isinstance(obj, pd.Series) else obj
+    numeric = frame.select_dtypes(include="number")
+    return bool(np.isinf(numeric.to_numpy(dtype=float)).any())
 
 
 def paired_rows_before(
