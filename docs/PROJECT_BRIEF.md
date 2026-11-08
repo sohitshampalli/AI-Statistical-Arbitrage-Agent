@@ -40,6 +40,7 @@ V/MA, KO/PEP, XOM/CVX, HD/LOW, EWA/EWC (country ETFs), plus a negative control (
 1. Foundations: synthetic cointegrated pair simulator + tests. Gate: code recovers true beta and half-life on synthetic data.
 2. Real pairs: loader with Parquet cache in data/, stats on each pair. Gate: all estimates use only data before their as-of date.
 3. Backtester: walk-forward (252-day formation, 63-day trading, roll), costs, metrics, controls. Gate: placebo controls show no edge, synthetic pair shows one.
+3b. Universe strategy: ETF universe, residual s-scores, cvxpy portfolio, cost model. Gate: on a synthetic universe with known factor structure and known residual OU parameters, the pipeline recovers them; placebo and shuffled controls show no edge; results are net of costs with a Deflated Sharpe on validation data; the test period stays untouched.
 4. Agent: MCP tool server + Agent SDK loop + hooks + JSONL log of every tool call. Gate: every number in a memo traces to a logged tool output.
 5. Experiment: Kalman, Johansen baskets, LLM break filter evaluated only on data after the model's knowledge cutoff (forward paper trading). Gate: results frozen before paper trades.
 6. Paper trading, README, paper.
@@ -63,3 +64,19 @@ Small commits with clear messages. Never push without asking. After each change 
 
 ## Style rules (whole project)
 - No emojis and no em dashes anywhere: UI text, README, docs, code comments, commit messages.
+
+## Data and service policy (free, no billing, no legal risk)
+- Only sources that need no payment method: SEC EDGAR (no key), FRED (free key), Kenneth French Data Library (no key), Alpaca paper trading and its free market data, yfinance (no key, personal research use only), and one free news source chosen later. If a sign-up asks for a credit card, do not use it.
+- Never commit downloaded data to git. Commit code and the manifest only. Cite every source in the README.
+- Respect each source's terms, rate limits and robots.txt. No scraping of paywalled or login-gated sites, or sites whose terms forbid it.
+- Alpaca: paper account only. Never fund an account or set ALPACA_PAPER_TRADE to false.
+- Claude API (Phase 4 agent) is the only paid service: prepaid credits, auto-reload off, a monthly spend limit, and token usage logged per run.
+- Do not copy code from other repositories. Reimplement ideas and cite them. If code is ever reused, keep its license notice.
+
+## Extension after the Phase 3 gate: universe strategy (Phase 3b)
+- Inspired by cross-sectional stat-arb systems (for example noterminusgit/statarb) and Avellaneda and Lee (2010), built only on free data.
+- Universe: liquid US sector and country ETFs first (rarely delisted, so less survivorship bias), then large-cap stocks labelled as survivorship-biased.
+- Signals: residuals against sector ETF returns and PCA factors, modelled as OU processes (s-scores). Sector ETFs, PCA and Fama-French factors replace proprietary risk models.
+- Portfolio construction with cvxpy: market and sector neutral, position limits, cost-aware.
+- Cost model: half-spread plus participation-based market impact, borrow fee, and dividends owed on shorts.
+- Same rules as everywhere: as-of on every estimator, walk-forward, trial log, Deflated Sharpe, untouched test period.

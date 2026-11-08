@@ -61,6 +61,7 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 |---|---|
 | 2. Real pairs | not started |
 | 3. Backtester | not started |
+| 3b. Universe strategy | not started |
 | 4. Agent | not started |
 | 4b. Dashboard | not started |
 | 5. Experiment | not started |
@@ -68,6 +69,8 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 
 ## Notes
 
+- cvxpy is a Phase 3b dependency (portfolio construction). It is not installed;
+  add it when Phase 3b starts.
 - statsmodels 0.15.0: call `adfuller(..., result_object=True)`; the tuple default is
   deprecated and raises FutureWarning (pytest treats FutureWarning as an error).
 - statsmodels 0.15.0: `coint` returns a `CointResult` regardless of `return_results`;
