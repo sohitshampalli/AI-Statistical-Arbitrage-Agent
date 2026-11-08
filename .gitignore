@@ -3,7 +3,8 @@
 .uv-python/
 .envrc
 .env
-/data/
+/data/*
+!/data/manifest.json
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store

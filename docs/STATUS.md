@@ -10,7 +10,7 @@ Gate: all estimates use only data before their as-of date.
 | Step | Commit | Status |
 |---|---|---|
 | 1. Study config, test-period lock, network guard for tests | 1 | done |
-| 2. Source interface, snapshot store and manifest | 2 | not started |
+| 2. Source interface, snapshot store and manifest | 2 | done |
 | 3. yfinance price source and total-return index | 3 | not started |
 | 4. Calendar alignment and data checks | 4 | not started |
 | 5. Screen config, pair statistics and trial log | 5 | not started |
@@ -124,6 +124,19 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   sockets, DNS, and the curl_cffi and requests sessions unless a test is marked
   `network` (deselected by default). curl_cffi needs its own patch because it uses
   libcurl, not Python sockets, and yfinance uses it.
+- Snapshot store (`sources/base.py`): files at `data/raw/<source>/<key>/<UTC
+  timestamp>.parquet`, opened in exclusive mode so a snapshot is never overwritten.
+  The manifest (`data/manifest.json`) is rewritten through a temporary file and
+  os.replace, so an interrupted write keeps the old one. Every read checks the
+  path stays inside `data/raw/`, then the file SHA-256, then the content SHA-256
+  (column names, dtypes, index name and `pd.util.hash_pandas_object`, because that
+  function alone ignores column names). The content hash can change across pandas
+  versions, so each entry records pandas_version. The store has no asof: it returns
+  whole snapshots, and each source's `load` applies asof.
+- Tickers pass `normalise_ticker` before any path or request: uppercase ASCII
+  letters and digits joined by single "." or "-", at most 12 characters, "."
+  rewritten to "-". Lowercase is rejected, not uppercased. The store accepts only
+  keys already in normalised form, so no key can hold a separator or "..".
 - cvxpy is a Phase 3b dependency (portfolio construction). It is not installed;
   add it when Phase 3b starts.
 - statsmodels 0.15.0: call `adfuller(..., result_object=True)`; the tuple default is
