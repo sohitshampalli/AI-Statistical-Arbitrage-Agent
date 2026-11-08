@@ -48,6 +48,14 @@ class NotCachedError(LookupError):
     """No snapshot exists for the requested source and key."""
 
 
+class SnapshotMissingError(NotCachedError):
+    """The manifest lists a snapshot whose file is not on disk.
+
+    This is the normal state of a fresh clone: the manifest is committed, the
+    downloaded data is not.
+    """
+
+
 class CacheIntegrityError(RuntimeError):
     """A snapshot file does not match the hashes recorded in the manifest."""
 
@@ -342,12 +350,21 @@ class SnapshotStore:
         """Read a snapshot, verifying the file hash and then the content hash.
 
         Raises:
-            CacheIntegrityError: If the path is outside raw/, the file is
-                missing, or either hash differs from the manifest.
+            SnapshotMissingError: If the file is not on disk (for example in a
+                fresh clone). The message names the key and snapshot id and
+                says how to download a new snapshot.
+            CacheIntegrityError: If the path is outside raw/ or either hash
+                differs from the manifest.
         """
         path = self._resolve(entry.path)
         if not path.is_file():
-            raise CacheIntegrityError(f"snapshot file missing: {entry.path}")
+            raise SnapshotMissingError(
+                f"The {entry.source} snapshot for {entry.key} is listed in the "
+                f"manifest but its file is missing (snapshot {entry.snapshot_id}, "
+                f"expected at {self.root / entry.path}). Downloaded data is not "
+                f"kept in git. Run `statarb fetch {entry.key}` to download a new "
+                "snapshot; results will record the new snapshot id."
+            )
         if _file_sha256(path) != entry.file_sha256:
             raise CacheIntegrityError(f"file hash mismatch for {entry.snapshot_id}")
         frame = pd.read_parquet(path, engine="pyarrow")

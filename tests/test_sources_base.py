@@ -23,6 +23,7 @@ from statarb_agent.sources.base import (
     Manifest,
     ManifestEntry,
     NotCachedError,
+    SnapshotMissingError,
     SnapshotStore,
     content_sha256,
     validate_key,
@@ -83,6 +84,11 @@ def store(tmp_path: Path) -> SnapshotStore:
         ("A", "A"),
         ("1234", "1234"),
         ("ABCDEFGHIJKL", "ABCDEFGHIJKL"),  # 12 characters, the maximum
+        ("ko", "KO"),
+        ("brk.b", "BRK-B"),
+        ("Brk.B", "BRK-B"),
+        ("bRk-b", "BRK-B"),
+        ("spy", "SPY"),
     ],
 )
 def test_valid_tickers(raw: str, expected: str) -> None:
@@ -94,9 +100,8 @@ def test_valid_tickers(raw: str, expected: str) -> None:
     "raw",
     [
         "",
-        "ko",
-        "Ko",
         " KO",
+        " ko",
         "KO ",
         "K O",
         "KO\n",
@@ -119,8 +124,13 @@ def test_valid_tickers(raw: str, expected: str) -> None:
         "KO.",
         "KO;rm",
         "KO*",
-        "ＫＯ",  # fullwidth K and O
-        "KΟ",  # Greek capital omicron that looks like O
+        "\uff2b\uff2f",  # fullwidth K and O
+        "K\u039f",  # Greek capital omicron that looks like O
+        "\u0131bm",  # dotless i, which uppercases to ASCII I
+        "\u017fpy",  # long s, which uppercases to ASCII S
+        "k\u00f6",  # o with diaeresis
+        "brk..b",
+        "../ko",
         "ABCDEFGHIJKLM",  # 13 characters
     ],
     ids=repr,
@@ -232,11 +242,25 @@ def test_changed_content_is_detected_even_with_matching_file_hash(
         store.read(forged)
 
 
-def test_missing_file_is_detected(store: SnapshotStore) -> None:
+def test_non_ascii_is_rejected_before_uppercasing() -> None:
+    assert "\u0131".upper() == "I" and "\u017f".upper() == "S"  # why order matters
+    for raw in ("\u0131BM", "\u017fPY"):
+        with pytest.raises(ValueError, match="only ASCII"):
+            normalise_ticker(raw)
+
+
+def test_missing_file_in_fresh_clone_names_key_snapshot_and_fix(
+    store: SnapshotStore,
+) -> None:
     entry = _write(store)
-    (store.root / entry.path).unlink()
-    with pytest.raises(CacheIntegrityError, match="missing"):
+    (store.root / entry.path).unlink()  # what a fresh clone looks like
+    with pytest.raises(SnapshotMissingError) as info:
         store.read(entry)
+    message = str(info.value)
+    assert "KO" in message
+    assert entry.snapshot_id in message
+    assert "statarb fetch KO" in message
+    assert isinstance(info.value, NotCachedError)
 
 
 @pytest.mark.parametrize(

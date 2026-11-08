@@ -133,10 +133,17 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   function alone ignores column names). The content hash can change across pandas
   versions, so each entry records pandas_version. The store has no asof: it returns
   whole snapshots, and each source's `load` applies asof.
-- Tickers pass `normalise_ticker` before any path or request: uppercase ASCII
-  letters and digits joined by single "." or "-", at most 12 characters, "."
-  rewritten to "-". Lowercase is rejected, not uppercased. The store accepts only
-  keys already in normalised form, so no key can hold a separator or "..".
+- Tickers pass `normalise_ticker` before any path or request. Any non-ASCII
+  character is rejected first, because str.upper maps some look-alikes to ASCII
+  (dotless i to I, long s to S). The input is then uppercased and must be ASCII
+  letters and digits joined by single "." or "-", at most 12 characters; "." is
+  rewritten to "-" (brk.b becomes BRK-B). The store accepts only keys already in
+  normalised form, so no key can hold a separator or "..".
+- A fresh clone has manifest entries but no snapshot files. Reading one raises
+  SnapshotMissingError naming the ticker and snapshot id and telling the user to
+  run `statarb fetch`. README (commit 7) must say that a fresh download creates
+  new snapshots, so numbers can differ slightly, and that every result records
+  its snapshot ids.
 - cvxpy is a Phase 3b dependency (portfolio construction). It is not installed;
   add it when Phase 3b starts.
 - statsmodels 0.15.0: call `adfuller(..., result_object=True)`; the tuple default is
