@@ -30,7 +30,9 @@ from statarb_agent.sources.base import ManifestEntry, SnapshotStore
 from statarb_agent.sources.prices import (
     PriceRequest,
     YFinancePrices,
+    canonical_yahoo_frame,
     distribution_yields,
+    make_yfinance_downloader,
     normalise_yfinance,
     split_day_returns,
     total_return_gap,
@@ -125,13 +127,56 @@ def test_checks_on_a_synthetic_snapshot(
     assert any("payments before first split: 2" in line for line in lines)
 
 
+def _frame_metadata(raw: pd.DataFrame) -> list[str]:
+    """Types and names only, never values."""
+    index = raw.index
+    unit = getattr(index, "unit", None)
+    tz = getattr(index, "tz", None)
+    return [
+        (f"raw columns dtype {raw.columns.dtype}, columns name {raw.columns.name!r}, "
+         f"attrs keys {sorted(raw.attrs)}"),
+        "raw column dtypes: "
+        + ", ".join(f"{col}={dtype}" for col, dtype in raw.dtypes.items()),
+        (f"raw index: type {type(index).__name__}, dtype {index.dtype}, unit {unit}, "
+         f"tz {tz}, name {index.name!r}, freq {getattr(index, 'freq', None)}"),
+    ]
+
+
+def test_frame_metadata_reports_types_only() -> None:
+    idx = pd.date_range("2012-01-03", periods=3, tz="America/New_York", name="Date",
+                        unit="s")
+    raw = pd.DataFrame({"Close": [1.5, 2.5, 3.5], "Volume": [1, 2, 3]}, index=idx)
+    lines = _frame_metadata(raw)
+    assert "Close=float64, Volume=int64" in lines[1]
+    assert "unit s" in lines[2] and "America/New_York" in lines[2]
+    assert not any("1.5" in line or "2.5" in line for line in lines)
+
+
 @pytest.mark.network
 def test_live_ko_download(tmp_path: Path, report_line: Callable[[str], None]) -> None:
     store = SnapshotStore(tmp_path / "data", repo_root=REPO_ROOT)
-    src = YFinancePrices(store, study=STUDY, pause_s=0.0)
+    download = make_yfinance_downloader(store.root / "cache" / "yfinance")
+
+    def recording_downloader(ticker: str, start: str, end: str) -> pd.DataFrame:
+        raw = download(ticker, start, end)
+        for line in _frame_metadata(raw):
+            report_line(line)
+        try:
+            _, conversions = canonical_yahoo_frame(raw, ticker)
+            report_line(f"conversion notes: {conversions}")
+        except ValueError as exc:
+            report_line(f"conversion refused: {exc}")
+        return raw
+
+    src = YFinancePrices(store, study=STUDY, downloader=recording_downloader,
+                         pause_s=0.0)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        entry = src.fetch(PriceRequest(TICKER, START, str(TEST_START.date())))
+        try:
+            entry = src.fetch(PriceRequest(TICKER, START, str(TEST_START.date())))
+        except Exception as exc:
+            report_line(f"fetch refused: {type(exc).__name__}: {exc}")
+            raise
     report_line(f"yfinance {importlib.metadata.version('yfinance')}, request {dict(entry.request)}")
     report_line(
         f"warnings during download: {len(caught)}"

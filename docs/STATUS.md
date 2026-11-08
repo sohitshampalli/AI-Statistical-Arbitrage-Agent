@@ -11,7 +11,7 @@ Gate: all estimates use only data before their as-of date.
 |---|---|---|
 | 1. Study config, test-period lock, network guard for tests | 1 | done |
 | 2. Source interface, snapshot store and manifest | 2 | done |
-| 3. yfinance price source and total-return index | 3 | done, live check pending |
+| 3. yfinance price source and total-return index | 3 | done, live check passed |
 | 4. Calendar alignment and data checks | 4 | done |
 | 5. Screen config, pair statistics and trial log | 5 | not started |
 | 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
@@ -150,15 +150,29 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   Yahoo's Adj Close (it embeds later dividends). A split after asof rescales every
   earlier row of Yahoo's split-adjusted Close by one factor, a constant shift in
   logs: the intercept moves, the hedge ratio and tests do not.
-- Live check, 2026-11-08, one approved KO download (2010-01-01 to 2022-01-01): the
-  download succeeded but the store refused to save it, because the content hash
-  changed across the Parquet write and read. The data was in a temporary folder and
-  is gone, so the exact dtype that changed is not known. Offline, a datetime64[s]
-  index reproduces the refusal (Parquet reads it back as [ms]), but pandas 3.1.1
-  gives [us] for yfinance's own conversion, so that is not confirmed as the cause.
-  Fixes: the store's error now names each dtype, column or row change, and fetch
-  converts to Parquet-safe types first. The live check has not been repeated; it
-  needs a new approval.
+- Live check, 2026-11-08, first approved KO download (2010-01-01 to 2022-01-01):
+  the download succeeded but the store refused to save it, because the content
+  hash changed across the Parquet write and read. Fixes: the store's error names
+  each dtype, column or row change, and fetch converts to Parquet-safe types first.
+- Live check, 2026-11-08, second approved KO download, same limits, passed.
+  Confirmed cause of the first failure: yfinance 1.8.0 returns the index as
+  `datetime64[s, America/New_York]` (unit s), which Parquet reads back as ms. The
+  earlier guess that pandas 3.1.1 gives [us] for yfinance's conversion was wrong.
+  All columns arrived in their target types (float64, Volume int64), so the only
+  conversion note was "index converted from datetime64[s, America/New_York] to
+  microsecond unit". Results, from 3021 rows, 2010-01-04 to 2021-12-31, no warnings:
+  - Split read from the Splits column: 2012-08-13, ratio 2. Close return that day
+    -0.2412 percent, tr_close return -0.2412 percent, so Close is split-adjusted
+    (asserted: below 10 percent).
+  - 48 payments, maximum 0.9003 percent of the previous close; 10 before the
+    split (max 0.8389 percent), 38 after (max 0.9003 percent). Dividends are on
+    the same split basis as Close (asserted: below 5 percent on both sides).
+  - tr_close vs Yahoo's Adj Close (reported, not asserted): maximum absolute
+    daily log-return difference 3.084e-04, on 2020-03-13; range of
+    log(tr_close / adj_close) over the period 6.127e-04.
+  The data was in a temporary folder and was not kept. The network test prints
+  the raw frame's column dtypes and index dtype, unit and tz (no values) before
+  any conversion.
 - Alignment (`data/alignment.py`): `align_pair` compares both series in
   [start, asof) and by default refuses any date present in one only, listing the
   dates. Dropping is allowed only up to `max_unmatched_days`, and every dropped
