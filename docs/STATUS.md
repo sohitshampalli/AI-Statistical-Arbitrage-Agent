@@ -3,7 +3,7 @@
 Phase tracker. Update this file in the same commit as the work it describes.
 Gates are defined in docs/PROJECT_BRIEF.md.
 
-## Current phase: 2. Real pairs (in progress)
+## Current phase: 2. Real pairs (gate passed 2026-11-10; Phase 3 not started)
 
 Gate: all estimates use only data before their as-of date.
 
@@ -15,7 +15,7 @@ Gate: all estimates use only data before their as-of date.
 | 4. Calendar alignment and data checks | 4 | done |
 | 5. Screen config, pair statistics and trial log | 5 | done |
 | 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | done |
-| 7. Live download and demo run (needs approval) | 7 | not started |
+| 7. Live download and demo run (needs approval) | 7 | done |
 
 Decisions for Phase 2 (2026-11-08):
 - Manifest at `data/manifest.json`, committed; `.gitignore` becomes `/data/*` plus
@@ -38,7 +38,49 @@ Decisions for Phase 2 (2026-11-08):
 - Tickers are sanitised before any file path is built (uppercase letters, digits,
   . and -, normalised to Yahoo's - form). Snapshots store a file hash and a content
   hash, and both are verified on read.
-- Ask before the commit 3 network test and before the commit 7 live run.
+- Network use is limited to the list in docs/SPRINT.md; anything else needs approval.
+
+## Phase 2 gate evidence
+
+Gate: all estimates use only data before their as-of date. `uv run pytest -q`
+(476 passed) and `uv run pytest -q -m slow` (4 passed) on 2026-11-10.
+
+Look-ahead tests, each changing rows at or after asof and requiring identical
+output:
+- End to end through the CLI, with every snapshot replaced:
+  `tests/test_analysis_cli.py::test_cli_analyse_ignores_cached_rows_at_or_after_asof`,
+  and `test_the_look_ahead_test_can_fail` shows it has power.
+- `pair_stats`: `tests/test_pair_stats.py::test_rows_at_or_after_asof_change_nothing`.
+- Price source `load`: `tests/test_prices.py` (second snapshot differing from asof).
+- `align_pair`: `tests/test_alignment.py`; `check_history`: `tests/test_checks.py`.
+- The Phase 1 estimators: listed under the Phase 1 gate evidence.
+- `apply_screen` reads no data; it compares numbers from `pair_stats`.
+
+Demo run, 2026-11-10, formation period, rows 2010-01-04 to 2017-12-29, 2013
+trading days (this confirms the T = 2013 used for the screen measurement). In
+sample. Engle-Granger p-values are "a on b / b on a". All seven results are in
+`trials/trials.jsonl` with their snapshot ids.
+
+| Pair | Label | EG p | Half-life | ADF levels p (a, b) | Screen |
+|---|---|---|---|---|---|
+| V / MA | case_study | 0.228 / 0.208 | 78.04 | 0.964, 0.892 | fail |
+| KO / PEP | case_study | 0.431 / 0.633 | 159.24 | 0.591, 0.918 | fail |
+| XOM / CVX | case_study | 0.442 / 0.549 | 120.34 | 0.379, 0.521 | fail |
+| HD / LOW | case_study | 0.246 / 0.275 | 97.46 | 0.893, 0.925 | fail |
+| EWA / EWC | case_study | 0.300 / 0.175 | 88.61 | 0.251, 0.150 | fail |
+| V / XOM | control | 0.875 / 0.466 | 277.36 | 0.964, 0.379 | fail |
+| SYNTH_A / SYNTH_B | synthetic | 1.36e-14 / 1.74e-14 | 7.90 | 0.396, 0.502 | pass |
+
+No case-study pair is cointegrated over the full eight-year window; each fails
+both the Engle-Granger and the half-life criterion. No data check refused a pair
+and no anomaly flag fired on these ten tickers in the formation window. The
+screen was not changed after seeing this. These are in-sample statements about
+one window; they say nothing about shorter rolling windows, which the Phase 3
+backtester examines.
+
+Downloads on 2026-11-10: SPY, V, MA, KO, PEP, KDP, XOM, CVX, HD, LOW, EWA, EWC,
+one fetch each, each 3021 rows from 2010-01-04 to 2021-12-31. The pre-approved
+allowance for these twelve is spent.
 
 ## Phase 1: Foundations (gate passed 2026-11-06)
 

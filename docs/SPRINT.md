@@ -62,7 +62,7 @@ or scope. Ideas that would change the plan go under "Proposed changes" below.
 
 ## Milestone A. Finish Phase 2 (real pairs)
 
-Status: in progress.
+Status: done 2026-11-10. Waiting at the hard gate after milestone A.
 
 Work:
 - A1. Record the formation-length measurement; `configs/screen.yaml` with values
@@ -175,6 +175,12 @@ offline mock mode for tests. No call to the paid Claude API.
 - 2026-11-10. A3 done: `configs/data.yaml`, `configs/pairs.yaml`, the analysis
   path, the CLI and the end-to-end look-ahead test. Next: A4, the twelve
   pre-approved downloads and the demo run.
+
+- 2026-11-10. A4 and A5 done: twelve tickers fetched once each, the demo run on
+  the formation period (all five case-study pairs and the control fail the screen,
+  the synthetic pair passes), README written, Phase 2 gate evidence in STATUS.
+  Quality gate: 476 fast tests and 4 slow tests pass, ruff clean, scan clean.
+  Milestone A complete. Next: milestone B, after the user's go-ahead.
 
 ## Reviews
 
