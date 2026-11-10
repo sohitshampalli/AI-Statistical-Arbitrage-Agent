@@ -169,6 +169,9 @@ offline mock mode for tests. No call to the paid Claude API.
   `apply_screen`, the measurement script and tests. The measurement reproduced
   exactly through the library code. Next: A2, the trial log.
 
+- 2026-11-10. A2 done: the append-only trial log with unlock events. Next: A3,
+  `configs/data.yaml`, `configs/pairs.yaml` and the CLI.
+
 ## Reviews
 
 None yet.

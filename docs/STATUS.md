@@ -13,7 +13,7 @@ Gate: all estimates use only data before their as-of date.
 | 2. Source interface, snapshot store and manifest | 2 | done |
 | 3. yfinance price source and total-return index | 3 | done, live check passed |
 | 4. Calendar alignment and data checks | 4 | done |
-| 5. Screen config, pair statistics and trial log | 5 | screen and pair statistics done; trial log next |
+| 5. Screen config, pair statistics and trial log | 5 | done |
 | 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
 | 7. Live download and demo run (needs approval) | 7 | not started |
 
@@ -214,6 +214,16 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   hedge ratio, Engle-Granger in both directions and the AR(1) fit of the
   in-sample spread, on rows in [start, asof). `apply_screen` (`screen.py`) only
   compares those numbers with the config.
+- Trial log (`trials.py`, file `trials/trials.jsonl`, committed): one JSON line
+  per analysis or evaluated backtest configuration, appended with a single
+  O_APPEND write and never rewritten. Each line has the label, tickers, period,
+  data source, survivorship flag, snapshot ids, config hashes, code commit and
+  dirty flag, whether the test period was touched, the unlock commits if any, the
+  outcome (ok, refused, error) with its reason, and results. Non-finite numbers
+  are stored as null. A damaged log (bad JSON, unknown keys, missing final
+  newline) stops both reads and writes. `record_unlock_event` writes one
+  `unlock_event` line per distinct pair of unlock commits; a trial that touched
+  the test period cannot be built without them.
 - A fresh clone has manifest entries but no snapshot files. Reading one raises
   SnapshotMissingError naming the ticker and snapshot id and telling the user to
   run `statarb fetch`. README (commit 7) must say that a fresh download creates

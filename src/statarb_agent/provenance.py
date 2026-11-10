@@ -1,7 +1,12 @@
-"""Which code produced a result: git commit and whether the tree was dirty."""
+"""Which code and configs produced a result.
+
+code_version gives the git commit and whether the tree was dirty; file_sha256
+gives the hash of a config file, so a result can name the exact settings used.
+"""
 
 from __future__ import annotations
 
+import hashlib
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -42,3 +47,13 @@ def code_version(repo_root: Path) -> CodeVersion:
     if head.returncode != 0 or status.returncode != 0:
         return CodeVersion(commit="unknown", dirty=True)
     return CodeVersion(commit=head.stdout.strip(), dirty=bool(status.stdout.strip()))
+
+
+def file_sha256(path: Path) -> str:
+    """SHA-256 of a file's bytes, as lowercase hex."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def config_hashes(paths: dict[str, Path]) -> dict[str, str]:
+    """SHA-256 of each named config file, keyed by the given names."""
+    return {name: file_sha256(path) for name, path in sorted(paths.items())}
