@@ -1,0 +1,37 @@
+# Demo universe from the project brief. These pairs were named in the brief
+# before any data was downloaded. They are case studies, not a selection made
+# with hindsight: expect some to fail the screen, and a failure is a result.
+#
+# Labels:
+#   case_study  a famous pair shown as an example
+#   control     a pair with no economic link, expected to show nothing
+# Pairs typed by the user and not listed here are labelled exploratory.
+#
+# In each pair the statistics regress a on b for the hedge ratio; Engle-Granger
+# is always reported in both directions.
+
+pairs:
+  - {a: V, b: MA, label: case_study}
+  - {a: KO, b: PEP, label: case_study}
+  - {a: XOM, b: CVX, label: case_study}
+  - {a: HD, b: LOW, label: case_study}
+  - {a: EWA, b: EWC, label: case_study}
+  - {a: V, b: XOM, label: control}
+
+# A simulated cointegrated pair with known parameters, analysed by the same
+# code. The seed was fixed on 2026-11-10 before the pair was ever simulated and
+# is not to be changed. n_obs is the planned number of trading days in the
+# formation period.
+synthetic:
+  name_a: SYNTH_A
+  name_b: SYNTH_B
+  seed: 20261110
+  beta: 1.5
+  alpha: 0.3
+  half_life: 10.0
+  spread_sd: 0.02
+  sigma_b: 0.015
+  n_obs: 2013
+
+# Basket for the Johansen analysis in the backtester phase.
+basket: [KO, PEP, KDP]

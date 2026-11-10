@@ -14,7 +14,7 @@ Gate: all estimates use only data before their as-of date.
 | 3. yfinance price source and total-return index | 3 | done, live check passed |
 | 4. Calendar alignment and data checks | 4 | done |
 | 5. Screen config, pair statistics and trial log | 5 | done |
-| 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
+| 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | done |
 | 7. Live download and demo run (needs approval) | 7 | not started |
 
 Decisions for Phase 2 (2026-11-08):
@@ -224,6 +224,25 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   newline) stops both reads and writes. `record_unlock_event` writes one
   `unlock_event` line per distinct pair of unlock commits; a trial that touched
   the test period cannot be built without them.
+- Analysis path (`analysis.py`, class `Analyser`) and CLI (`cli.py`, script
+  `statarb`): `statarb fetch TICKER...` (skips cached tickers unless `--refresh`),
+  `statarb analyse A B [--offline] [--json]`, `statarb demo`. A real pair is
+  cached if needed, loaded with the period's asof, checked against SPY's trading
+  days, aligned, analysed on log `tr_close` and screened; one trial line is
+  written whatever the outcome. A refusal (failed data check, date mismatch, no
+  data) is a normal logged result with exit code 2. Invalid input (bad ticker,
+  the same ticker twice) raises and logs nothing. Thresholds are in
+  `configs/data.yaml`, demo pairs in `configs/pairs.yaml`, each with its reasons.
+  If the manifest lists a snapshot whose file is missing (a fresh clone),
+  `analyse` downloads a new snapshot and says so; with `--offline` it stops and
+  names the `statarb fetch` command.
+- Phase 2 gate test: `tests/test_analysis_cli.py::
+  test_cli_analyse_ignores_cached_rows_at_or_after_asof` replaces every snapshot
+  (both legs and the calendar) with one that differs from the as-of date on
+  (prices, payouts, a split, NaN, missing days) and requires identical output;
+  `test_the_look_ahead_test_can_fail` shows the same change one row earlier is
+  detected.
+- The synthetic demo pair uses seed 20261110, fixed before it was simulated.
 - A fresh clone has manifest entries but no snapshot files. Reading one raises
   SnapshotMissingError naming the ticker and snapshot id and telling the user to
   run `statarb fetch`. README (commit 7) must say that a fresh download creates

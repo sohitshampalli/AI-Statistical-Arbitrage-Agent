@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from statarb-agent!")
+"""statarb-agent: cointegration pairs research. Paper research only."""

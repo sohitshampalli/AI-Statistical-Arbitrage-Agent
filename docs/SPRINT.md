@@ -172,6 +172,10 @@ offline mock mode for tests. No call to the paid Claude API.
 - 2026-11-10. A2 done: the append-only trial log with unlock events. Next: A3,
   `configs/data.yaml`, `configs/pairs.yaml` and the CLI.
 
+- 2026-11-10. A3 done: `configs/data.yaml`, `configs/pairs.yaml`, the analysis
+  path, the CLI and the end-to-end look-ahead test. Next: A4, the twelve
+  pre-approved downloads and the demo run.
+
 ## Reviews
 
 None yet.

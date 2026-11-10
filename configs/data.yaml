@@ -1,0 +1,35 @@
+# Data settings: what is downloaded and which data checks run before analysis.
+# None of these values was chosen by looking at results.
+#
+# reference_calendar: the ticker whose trading days define "a trading day". A
+#   pair's legs are checked against it for missing or extra days. SPY trades on
+#   every NYSE session and its calendar comes from its own snapshot.
+# download_start: first date requested. The formation period starts 2010-01-01.
+#   Downloads end at the test-period lock (2022-01-01) while it is locked.
+# min_obs: fewest rows a leg needs in the analysis window. 252 is one year of
+#   trading days, the formation window of the walk-forward design; the checks
+#   against the reference calendar are the binding ones on longer windows.
+# max_unmatched_days: dates present in one leg only that may be dropped when
+#   aligning a pair. 0 means any mismatch refuses the analysis.
+#
+# Anomaly flags. A flag never refuses and never changes data (yfinance repair is
+# off); it is shown in the output and stored in the trial log.
+# max_abs_log_return: flag a daily close-to-close move above this in absolute
+#   log return. 0.4 is a move of about -33 or +49 percent in a day, far outside
+#   normal large-cap behaviour, so it marks a likely data error or a real event
+#   worth reading about.
+# max_distribution_fraction: flag a dividend plus capital gain above this
+#   fraction of the previous close. Ordinary quarterly dividends are near 0.01.
+# stale_run: flag this many or more identical consecutive closes, a sign of a
+#   halted or stale series.
+#
+# pause_seconds: wait between two downloads, to stay polite to the free source.
+
+reference_calendar: SPY
+download_start: "2010-01-01"
+min_obs: 252
+max_unmatched_days: 0
+max_abs_log_return: 0.4
+max_distribution_fraction: 0.10
+stale_run: 5
+pause_seconds: 2.0
