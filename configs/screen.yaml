@@ -1,0 +1,50 @@
+# Pair screen, applied to the full formation window (2010-01-01 to 2017-12-31).
+#
+# A pair passes only if every criterion holds:
+#   1. Engle-Granger p-value below eg_pvalue_max in BOTH directions
+#      (A on B and B on A; the smaller of the two is never used alone).
+#   2. The AR(1) fit of the in-sample spread is mean-reverting (0 < b < 1) and
+#      its half-life lies in [half_life_min, half_life_max] bars.
+#   3. Both legs fail to reject a unit root in log-price levels: ADF p-value at
+#      or above adf_level_pvalue_min for each leg.
+#
+# Where the values come from. No real pair was looked at to choose them.
+#
+# - eg_pvalue_max 0.05 and adf_level_pvalue_min 0.05: the conventional 5 percent
+#   level, fixed before any measurement.
+# - half_life_min 1.0: trades execute at the next bar, so a spread that
+#   half-reverts in under one bar cannot be traded.
+# - half_life_max 63.0: the length of one trading window in the walk-forward
+#   design (63 bars). A spread slower than that is not expected to revert
+#   within the window it is traded in.
+#
+# Measurement at the formation length (T = 2013 rows, the planned number of
+# trading days in 2010 to 2017), 1000 simulations per row, seeds 6000 to 6999,
+# which no test uses. Script: scripts/measure_formation_screen.py. Measured on
+# 2026-11-08 and reproduced through pair_stats and apply_screen on 2026-11-10.
+#
+#   series                  EG both < 0.05   half-life in [1, 63]   both legs ADF >= 0.05   full screen
+#   independent random walks      1.4%              4.8%                  89.2%              10 of 1000
+#   cointegrated, half-life 5   100.0%            100.0%                  92.7%             927 of 1000
+#   cointegrated, half-life 10  100.0%            100.0%                  93.2%             932 of 1000
+#   cointegrated, half-life 20  100.0%            100.0%                  93.8%             938 of 1000
+#   cointegrated, half-life 32   99.6%            100.0%                  94.2%             938 of 1000
+#   cointegrated, half-life 63   74.6%             76.6%                  94.2%             684 of 1000
+#   cointegrated, half-life 100  38.7%             40.0%                  94.2%             358 of 1000
+#
+# What this shows:
+# - On random walks the screen passes 1.0 percent. Requiring both directions
+#   does the filtering (1.4 percent pass both, 8.5 percent pass either).
+# - The half-life window removed no random walk that had passed Engle-Granger;
+#   it only removes slow true pairs (24 at half-life 63, 11 at half-life 100).
+#   It is kept for the trading-window reason above, not as a random-walk filter.
+# - The ADF criterion costs about 6 to 7 percent of true pairs at every
+#   half-life, which is the ADF false-rejection rate on a random-walk leg.
+#
+# A pass is an in-sample statement about the formation window. It is not
+# evidence that the pair mean-reverts out of sample.
+
+eg_pvalue_max: 0.05
+half_life_min: 1.0
+half_life_max: 63.0
+adf_level_pvalue_min: 0.05

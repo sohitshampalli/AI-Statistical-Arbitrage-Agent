@@ -13,7 +13,7 @@ Gate: all estimates use only data before their as-of date.
 | 2. Source interface, snapshot store and manifest | 2 | done |
 | 3. yfinance price source and total-return index | 3 | done, live check passed |
 | 4. Calendar alignment and data checks | 4 | done |
-| 5. Screen config, pair statistics and trial log | 5 | not started |
+| 5. Screen config, pair statistics and trial log | 5 | screen and pair statistics done; trial log next |
 | 6. CLI: `statarb analyse`, `fetch`, `demo` | 6 | not started |
 | 7. Live download and demo run (needs approval) | 7 | not started |
 
@@ -26,9 +26,12 @@ Decisions for Phase 2 (2026-11-08):
 - `analyse` downloads an uncached ticker and says so, naming the snapshot used;
   `--offline` forbids downloads. Formation period only; the CLI refuses the
   validation period until Phase 3.
-- Provisional screen: Engle-Granger p < 0.05 in both directions, half-life in
-  [1, 63] bars on the full formation window, both legs fail to reject ADF on levels
-  at 5 percent. Values are fixed only after measuring at the formation length.
+- Screen (fixed 2026-11-10, `configs/screen.yaml`, before any real pair was run):
+  Engle-Granger p < 0.05 in both directions, half-life in [1, 63] bars on the full
+  formation window, both legs fail to reject ADF on levels at 5 percent. The 5
+  percent levels are conventional; the half-life floor of 1 bar follows from
+  next-bar execution and the cap of 63 bars is one walk-forward trading window.
+  The measurement behind it is in the Notes ("Screen at the formation length").
 - Download start 2010-01-01. yfinance with repair=False; anomalies are flagged,
   never fixed: absolute daily log return above 0.4, a dividend above 10 percent of
   the close, runs of 5 or more identical closes.
@@ -192,6 +195,25 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   above 10 percent of the previous close), stale_closes (5 or more identical
   consecutive closes). Flags go into the trial log (commit 5) and CLI output
   (commit 6).
+- Screen at the formation length (T = 2013 rows, seeds 6000 to 6999, 1000
+  simulations per row, `scripts/measure_formation_screen.py`, run through
+  `pair_stats` and `apply_screen`). Full screen passes: independent random walks
+  10 of 1000; cointegrated pairs with true half-life 5, 10, 20, 32, 63, 100:
+  927, 932, 938, 938, 684, 358 of 1000. On random walks, Engle-Granger rejected
+  in both directions on 1.4 percent and in either on 8.5 percent, so requiring
+  both does the filtering. The half-life window removed no random walk that had
+  passed Engle-Granger; it removed 24 true pairs at half-life 63 and 11 at 100.
+  The ADF criterion on the legs costs 6 to 7 percent of true pairs at every
+  half-life. Estimated half-life medians: random walks 175.85 (12 undefined);
+  true 10: 9.62; true 32: 28.35; true 63: 49.90. T = 2013 is the planned count of
+  trading days in 2010 to 2017; it is confirmed against SPY's snapshot when that
+  is downloaded. A slow test on other seeds (7000 onward) measured 4 of 300
+  random walks and 188 of 200 true pairs passing, inside its bounds of at most 4
+  percent and at least 85 percent.
+- `pair_stats` (`stats/pair.py`) gathers ADF on levels and returns, the OLS
+  hedge ratio, Engle-Granger in both directions and the AR(1) fit of the
+  in-sample spread, on rows in [start, asof). `apply_screen` (`screen.py`) only
+  compares those numbers with the config.
 - A fresh clone has manifest entries but no snapshot files. Reading one raises
   SnapshotMissingError naming the ticker and snapshot id and telling the user to
   run `statarb fetch`. README (commit 7) must say that a fresh download creates

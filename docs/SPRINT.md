@@ -165,6 +165,10 @@ offline mock mode for tests. No call to the paid Claude API.
   (6ece2e9); the formation-length measurement was run and reported but not yet
   written to STATUS or a config. Baseline: 396 tests pass, ruff clean, tree clean.
 
+- 2026-11-10. A1 done: `configs/screen.yaml` with its derivation, `pair_stats`,
+  `apply_screen`, the measurement script and tests. The measurement reproduced
+  exactly through the library code. Next: A2, the trial log.
+
 ## Reviews
 
 None yet.
