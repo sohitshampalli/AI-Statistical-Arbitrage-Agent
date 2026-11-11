@@ -202,6 +202,8 @@ offline mock mode for tests. No call to the paid Claude API.
   (`rolling_ols_hedge`) and the hand-written Kalman filter (`stats/kalman.py`)
   with exact closed-form tests, a time-varying beta recovery test and look-ahead
   tests.
+- 2026-11-11. Johansen wrapper (`stats/johansen.py`) done, with `simulate_basket`
+  and `simulate_random_walk_pair` in the simulator.
 
 ## Reviews
 

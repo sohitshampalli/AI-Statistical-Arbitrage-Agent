@@ -16,6 +16,7 @@ import pytest
 from statarb_agent.data.synthetic import (
     ar1_coefficient_from_half_life,
     simulate_cointegrated_pair,
+    simulate_random_walk_pair,
 )
 
 SEED = 12345
@@ -150,3 +151,25 @@ def test_spread_ar1_structure(half_life: float) -> None:
 def test_rejects_bad_input(kwargs: dict) -> None:
     with pytest.raises(ValueError):
         simulate_cointegrated_pair(**kwargs)
+
+
+# Random-walk pair ------------------------------------------------------------
+
+
+def test_random_walk_pair_is_what_the_docstring_says() -> None:
+    df = simulate_random_walk_pair(seed=11, n_obs=500, sigma=0.02)
+    assert list(df.columns) == ["log_a", "log_b"] and len(df) == 500
+    assert df.index.name == "date" and df.index[0] == pd.Timestamp("2000-01-03")
+    assert df["log_a"].iloc[0] == df["log_b"].iloc[0] == math.log(100.0)
+    # the increments are exactly sigma times the generator's draws, in order
+    draws = np.random.default_rng(11).standard_normal((2, 499))
+    np.testing.assert_allclose(np.diff(df["log_a"]), 0.02 * draws[0], rtol=1e-12,
+                               atol=1e-15)
+    np.testing.assert_allclose(np.diff(df["log_b"]), 0.02 * draws[1], rtol=1e-12,
+                               atol=1e-15)
+    pd.testing.assert_frame_equal(
+        df, simulate_random_walk_pair(seed=11, n_obs=500, sigma=0.02), check_exact=True
+    )
+    for bad in ({"seed": -1}, {"seed": 1, "n_obs": 2}, {"seed": 1, "sigma": 0.0}):
+        with pytest.raises(ValueError):
+            simulate_random_walk_pair(**bad)

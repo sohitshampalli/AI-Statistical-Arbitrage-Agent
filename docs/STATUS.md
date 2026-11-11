@@ -373,3 +373,12 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   200-seed range); seed 8300 failed it at 2.8 standard errors, the seed was kept
   and the bound replaced by the theoretical 4 standard errors, as its docstring
   records.
+- Johansen (`stats/johansen.py`, constant term, one lagged difference): rank by
+  the sequential trace test at 5 percent; the first eigenvector is scaled to
+  absolute sum 1. Calibration on simulated three-asset baskets, seeds 9000 to
+  9299: the trace test rejected no relation on 9.7 percent of independent baskets
+  at 2013 rows and 10.7 percent at 252 rows (nominal 5 percent), and found a true
+  relation with half-life 10 on 100 percent at 2013 rows but only 25.7 percent at
+  252 rows. Weight error at 252 rows is large (mean 0.088, maximum 0.995, against
+  0.0049 and 0.0184 at 2013 rows), so basket weights from a 252-day formation
+  window are noisy.
