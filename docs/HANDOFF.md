@@ -61,6 +61,8 @@ sprint milestone A.
 - Network allowance: the twelve demo tickers and the KO rerun are spent. Still
   pre-approved for milestone D only: one fetch each of XLB, XLE, XLF, XLI, XLK,
   XLP, XLU, XLV, XLY, XLRE, XLC. Anything else needs the user's approval.
+- Back up `data/raw/` outside git (for example with Time Machine); the user
+  asked for this note on 2026-11-11. The trial log stays committed.
 - The snapshot files are under `data/raw/` (gitignored). If they are lost, a
   re-fetch needs approval and creates new snapshot ids.
 - Slow tests take about 3 minutes.

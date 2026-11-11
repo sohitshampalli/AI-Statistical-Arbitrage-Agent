@@ -98,6 +98,9 @@ in the trial log with their snapshot ids.
   with a file hash and a content hash, both checked on every read.
   `data/manifest.json` (committed) lists every snapshot with its source, request,
   retrieval time and hashes.
+- Back up `data/raw/` outside git (for example with Time Machine). The snapshot
+  files are not in the repository, and a snapshot that is lost cannot be
+  downloaded again in the same form: a new download gets a new snapshot id.
 - A fresh clone has the manifest but not the snapshot files. `statarb analyse`
   and `statarb demo` download new snapshots when a file is missing. Yahoo
   occasionally revises history, so numbers from a fresh download can differ
