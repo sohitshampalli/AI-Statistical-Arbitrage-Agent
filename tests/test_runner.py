@@ -24,13 +24,14 @@ from statarb_agent.backtest.runner import (
     counts_for_deflation,
     equal_weight_portfolio,
     screen_status,
+    screened_not_backtested,
     trial_sharpes,
 )
 from statarb_agent.backtest.runs import list_runs, read_manifest, read_table
 from statarb_agent.project import Project
 from statarb_agent.sources.base import SnapshotStore
 from statarb_agent.sources.prices import YFinancePrices
-from statarb_agent.study import load_study
+from statarb_agent.study import LockedPeriodError, load_study
 from statarb_agent.trials import TrialLog
 
 N_ROWS = len(CALENDAR)
@@ -97,8 +98,17 @@ def test_pair_backtest_is_logged_and_stored(runner: Backtester) -> None:
     trades = read_table(runs_dir, record.run_id, "trades")
     assert len(trades) == len(direct.trades) > 0
     assert set(read_manifest(runs_dir, record.run_id)["files"]) == {
-        "daily", "trades", "signals", "windows", "prices",
+        "daily", "trades", "signals", "windows", "prices", "benchmark",
     }
+    benchmark = read_table(runs_dir, record.run_id, "benchmark")
+    spy = loaded.calendar_frame["tr_close"]
+    assert benchmark["ret"].iloc[0] == pytest.approx(spy.iloc[1] / spy.iloc[0] - 1.0)
+    assert man["spans_in_sample_for_screen"] == ["full", "formation"]
+    open_trades = direct.trades.loc[direct.trades["open"]]
+    assert man["open_at_end"]["open"] is bool(len(open_trades))
+    assert man["open_at_end"]["exit_cost_not_charged_return"] == pytest.approx(
+        direct.daily["gross_exposure"].iloc[-1] * 10e-4 / 1e6
+    )
     prices = read_table(runs_dir, record.run_id, "prices")
     assert list(prices.columns) == ["AAA", "BBB"] and len(prices) == N_ROWS
     # one trial cannot be deflated: the ratio is stored as undefined (null)
@@ -264,7 +274,13 @@ def test_placebo_batch_ranks_the_real_run(runner: Backtester) -> None:
     seeds = read_table(runner.project.runs_dir, placebo.run_id, "seeds")
     assert list(seeds["seed"]) == [40000, 40001, 40002]
     at_least = int((seeds["sharpe"] >= man["real_sharpe"]).sum())
-    assert man["rank"]["share_at_least"] == pytest.approx((1 + at_least) / 4)
+    assert set(man["rank"]) == {"full", "formation", "validation"}
+    assert man["rank"]["full"]["real_sharpe"] == man["real_sharpe"]
+    assert man["rank"]["full"]["share_at_least"] == pytest.approx((1 + at_least) / 4)
+    real_validation = real.manifest["metrics"]["validation"]["sharpe"]
+    assert man["rank"]["validation"]["real_sharpe"] == real_validation
+    at_least = int((seeds["sharpe_validation"] >= real_validation).sum())
+    assert man["rank"]["validation"]["share_at_least"] == pytest.approx((1 + at_least) / 4)
     trial = runner.log.read()[-1]
     assert trial.parameters["placebo"] == {
         "first_seed": 40000, "shuffles": 3, "legs": "both", "real_run_id": real.run_id,
@@ -284,7 +300,8 @@ def test_run_demo_runs_everything_once(runner: Backtester) -> None:
     assert len(batches) == 6 + 6
     trials = runner.log.read()
     by_kind = pd.Series([t.kind for t in trials]).value_counts().to_dict()
-    assert by_kind == {"backtest": 75 + 12, "pair_analysis": 2, "basket_analysis": 1}
+    # the six real pairs and the two simulated ones are screened first, once each
+    assert by_kind == {"backtest": 75 + 12, "pair_analysis": 8, "basket_analysis": 1}
     assert sum(counts_for_deflation(t) for t in trials) == 57
     assert runner.demo_already_run()
     labels = {tuple(r.manifest["tickers"]): r.manifest["label"] for r in backtests}
@@ -301,40 +318,143 @@ def test_run_demo_runs_everything_once(runner: Backtester) -> None:
     real_rows = [r for r in man["rows"] if r["data_source"] == "yfinance"]
     assert all(r["deflated_sharpe"]["validation"]["n_trials"] == 57 for r in real_rows)
     assert all(r["deflated_sharpe"] is None for r in man["rows"] if r not in real_rows)
-    # the demo pairs were never analysed in this throwaway project
-    assert {r["screen_status"] for r in real_rows if r["strategy"] == "pair"} == {
-        "not_analysed"
-    }
-    assert man["headline"]["n_runs"] == 0 and man["headline"]["metrics"] is None
-    assert "takes no positions" in man["headline"]["statement"]
+    # every real run carries a screen result: run_demo screens before it backtests
+    statuses = {tuple(r["tickers"]): r["screen_status"] for r in real_rows}
+    assert set(statuses.values()) <= {"pass", "fail"}
+    assert all(r["screen_status"] == r["screen_status_at_run"] for r in real_rows)
+    # candidates: the five case-study pairs and the basket, not the control pair
+    head = man["headline"]
+    assert head["n_candidates"] == 6 and sum(head["candidate_screen_status"].values()) == 6
+    passed = [t for t, st in statuses.items() if st == "pass" and t != ("V", "XOM")]
+    assert head["n_runs"] == len(passed) and head["duplicate_run_ids_ignored"] == []
+    if passed:
+        assert head["metrics"]["validation"] is not None
+    else:
+        assert head["metrics"] is None
+        assert "none passed" in head["statement"]
+        assert "takes no positions" in head["statement"]
+    # running the demo a second time does not screen anything again
+    n_analyses = runner.log.count(kind="pair_analysis")
+    runner.analyse_simulated("random_walk")
+    assert runner.log.count(kind="pair_analysis") == n_analyses
 
 
-def test_headline_is_the_screened_pairs_at_the_default_settings(
-    runner: Backtester,
-) -> None:
-    runner.analyser.ensure_cached(["AAA", "BBB", "KO", "PEP", "SPY"], offline=False)
-    provenance = {
-        "data_source": "yfinance", "survivorship_bias": True, "snapshot_ids": {},
-        "config_hashes": {}, "code_commit": "c", "code_dirty": False,
-        "test_period_touched": False, "unlock": None, "outcome": "ok",
-        "period": {"name": "formation", "start": "2010-01-01", "asof": "2018-01-01"},
-    }
-    for tickers, passed in ((("AAA", "BBB"), True), (("KO", "PEP"), False)):
-        runner.log.record(
-            kind="pair_analysis", label="exploratory", tickers=tickers,
-            results={"screen": {"passed": passed, "criteria": []}}, **provenance,
-        )
-    chosen = runner.backtest_pair("AAA", "BBB")
-    runner.backtest_pair("AAA", "BBB", cost_bps=20.0)  # not the default cost
-    runner.backtest_pair("AAA", "BBB", hedge="kalman")  # not the default hedge
+def _analysis_trial(runner: Backtester, tickers: tuple[str, ...], passed: bool) -> None:
+    """Write a formation-period analysis line with a chosen screen result."""
+    runner.log.record(
+        kind="pair_analysis", label="case_study", tickers=tickers,
+        period={"name": "formation", "start": "2010-01-01", "asof": "2018-01-01"},
+        data_source="yfinance", survivorship_bias=True, snapshot_ids={},
+        config_hashes={}, code_commit="c", code_dirty=False,
+        test_period_touched=False, unlock=None, outcome="ok",
+        results={"screen": {"passed": passed, "criteria": []}},
+    )
+
+
+def test_headline_is_the_screened_candidates_once_each(runner: Backtester) -> None:
+    """The headline holds pre-registered runs that passed the screen, at the
+    default hedge and cost, one per pair, and reports what is out of sample."""
+    _analysis_trial(runner, ("AAA", "BBB"), True)
+    _analysis_trial(runner, ("KO", "PEP"), False)
+    _analysis_trial(runner, ("HD", "LOW"), True)
+    chosen = runner.backtest_pair("AAA", "BBB", label="case_study")
+    runner.backtest_pair("AAA", "BBB", label="case_study", cost_bps=20.0)
+    runner.backtest_pair("AAA", "BBB", label="case_study", hedge="kalman")
     runner.backtest_pair("KO", "PEP", label="case_study")  # failed the screen
-    man = runner.summarise().manifest
-    assert man["headline"]["run_ids"] == [chosen.run_id] and man["headline"]["n_runs"] == 1
+    alone = runner.summarise().manifest["headline"]
+    assert alone["run_ids"] == [chosen.run_id] and alone["n_candidates"] == 2
+    assert alone["candidate_screen_status"] == {"pass": 1, "fail": 1}
+    assert alone["out_of_sample_span"] == "validation"
+    assert alone["spans_in_sample_for_screen"] == ["full", "formation"]
     for span in ("full", "formation", "validation"):
-        mine, theirs = man["headline"]["metrics"][span], chosen.manifest["metrics"][span]
+        mine, theirs = alone["metrics"][span], chosen.manifest["metrics"][span]
         assert mine["sharpe"] == pytest.approx(theirs["sharpe"])
         assert mine["total_return"] == pytest.approx(theirs["total_return"])
         assert mine["n_trades"] == theirs["n_trades"]
+        # the headline has a beta to SPY and a Deflated Sharpe ratio of its own
+        assert mine["beta_to_benchmark"] == pytest.approx(theirs["beta_to_benchmark"])
+        # four backtests so far, plus HD/LOW: screened above, not yet backtested
+        assert alone["deflated_sharpe"][span]["n_trials"] == 5
+
+    # the same pair again, and with its legs swapped: still held once
+    again = runner.backtest_pair("AAA", "BBB", label="case_study")
+    swapped = runner.backtest_pair("BBB", "AAA", label="case_study")
+    second = runner.backtest_pair("HD", "LOW", label="case_study")
+    # an exploratory pair that passed the screen is listed but never held
+    _analysis_trial(runner, ("XOM", "CVX"), True)
+    exploratory = runner.backtest_pair("XOM", "CVX", label="exploratory")
+    man = runner.summarise().manifest
+    head = man["headline"]
+    assert head["run_ids"] == [chosen.run_id, second.run_id] and head["n_runs"] == 2
+    assert head["duplicate_run_ids_ignored"] == [again.run_id, swapped.run_id]
+    assert man["exploratory_screened_run_ids"] == [exploratory.run_id]
+    both = [chosen.manifest["metrics"]["validation"], second.manifest["metrics"]["validation"]]
+    assert head["metrics"]["validation"]["total_return"] == pytest.approx(
+        (both[0]["total_return"] + both[1]["total_return"]) / 2
+    )
+    assert head["metrics"]["validation"]["n_trades"] == both[0]["n_trades"] + both[1]["n_trades"]
+
+
+def test_headline_says_why_it_is_empty(runner: Backtester) -> None:
+    empty = runner.summarise().manifest["headline"]
+    assert empty["n_candidates"] == 0 and "no headline yet" in empty["statement"]
+    runner.backtest_pair("KO", "PEP", label="case_study")
+    not_screened = runner.summarise().manifest["headline"]
+    assert not_screened["candidate_screen_status"] == {"not_analysed": 1}
+    assert "cannot be stated yet" in not_screened["statement"]
+    assert "none passed" not in not_screened["statement"]
+    _analysis_trial(runner, ("KO", "PEP"), False)
+    failed = runner.summarise().manifest["headline"]
+    assert failed["candidate_screen_status"] == {"fail": 1}
+    assert "All 1 pre-registered candidates were screened" in failed["statement"]
+    assert "none passed" in failed["statement"] and failed["metrics"] is None
+
+
+def test_screened_candidates_that_were_dropped_count_as_trials(runner: Backtester) -> None:
+    """Analysing a real pair and not backtesting it is still an attempt."""
+    runner.backtest_pair("AAA", "BBB", cost_bps=0.0)
+    runner.backtest_pair("AAA", "BBB")
+    assert len(trial_sharpes(runner.log.read(), "validation")) == 2
+    runner.analyser.analyse_pair("KO", "PEP")
+    runner.analyser.analyse_pair("PEP", "KO")  # the same candidate again
+    runner.analyser.analyse_pair("BBB", "AAA")  # already backtested
+    runner.analyser.analyse_synthetic()  # simulated: not a real candidate
+    trials = runner.log.read()
+    assert screened_not_backtested(trials) == [("KO", "PEP")]
+    sharpes = trial_sharpes(trials, "validation")
+    assert len(sharpes) == 3 and int(np.isnan(sharpes).sum()) == 1
+    record = runner.backtest_pair("AAA", "BBB", cost_bps=20.0)
+    deflated = record.manifest["deflated_sharpe"]["validation"]
+    assert deflated["n_trials"] == 4 and deflated["n_defined"] == 3
+    man = runner.summarise().manifest
+    assert man["n_backtests_counted"] == 3 and man["n_trials_counted"] == 4
+    assert man["screened_not_backtested"] == [["KO", "PEP"]]
+
+
+def test_as_of_in_the_locked_test_period_is_refused(runner: Backtester) -> None:
+    """The runner cannot be pointed past the lock: the price source refuses the
+    as-of date before any row is read, and nothing is logged or stored."""
+    runner.analyser.ensure_cached(["AAA", "BBB", "SPY"], offline=False)
+    runner.asof = pd.Timestamp("2023-01-01")
+    with pytest.raises(LockedPeriodError):
+        runner.backtest_pair("AAA", "BBB")
+    with pytest.raises(LockedPeriodError):
+        runner.backtest_basket(["AAA", "BBB", "SPY"])
+    assert runner.log.count() == 0 and list_runs(runner.project.runs_dir) == []
+
+
+def test_an_engine_failure_is_logged_as_an_error(
+    runner: Backtester, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*args: object, **kwargs: object) -> None:
+        raise ValueError("boom")
+
+    monkeypatch.setattr("statarb_agent.backtest.runner.run_pair_backtest", broken)
+    record = runner.backtest_pair("AAA", "BBB")
+    assert record.outcome == "error" and record.reason == "backtest failed: boom"
+    assert record.path is None and list_runs(runner.project.runs_dir) == []
+    (trial,) = runner.log.read()
+    assert trial.outcome == "error" and not counts_for_deflation(trial)
 
 
 def test_equal_weight_portfolio_by_hand() -> None:
@@ -344,7 +464,8 @@ def test_equal_weight_portfolio_by_hand() -> None:
         frame = pd.DataFrame({"pnl": pnl, "position": position}, index=idx)
         for column in ("price_pnl", "gross_pnl"):
             frame[column] = frame["pnl"] + 1.0
-        for column in ("dist_pnl", "borrow_cost", "trade_cost", "traded_notional"):
+        for column in ("dist_pnl", "borrow_cost", "trade_cost", "traded_notional",
+                       "gross_exposure", "net_exposure"):
             frame[column] = 0.5
         return frame
 
@@ -398,7 +519,8 @@ def test_cli_backtest_and_runs(cli_env: Project) -> None:
     assert "downloaded AAA just now" in out
     assert "Formation-period screen: not_analysed" in out
     assert "formation (" in out and "validation (2018-01-01 to 2021-12-31)" in out
-    assert "Deflated Sharpe n/a (1 trials)" in out and "Costs are included" in out
+    assert "Deflated Sharpe n/a (1 trials so far)" in out and "Costs are included" in out
+    assert "only the validation span is out of sample" in out
     trial = TrialLog(cli_env.trials_path).read()[0]
     assert trial.trial_id in out and trial.kind == "backtest"
 
@@ -438,7 +560,9 @@ def test_cli_backtest_demo_refuses_a_second_run(cli_env: Project) -> None:
     assert first.exit_code == 0, first.output
     assert "KO/PEP [case_study] static 10bps" in first.output
     assert "[placebo batch]" in first.output and "[random_walk batch]" in first.output
-    assert "takes no positions" in first.output and "Summary: " in first.output
+    summaries = [m for m in list_runs(cli_env.runs_dir) if m["kind"] == "summary"]
+    assert summaries[-1]["headline"]["statement"] in first.output
+    assert "Summary: " in first.output
     n_trials = TrialLog(cli_env.trials_path).count()
     second = invoke(cli_env, "backtest-demo")
     assert second.exit_code == 1 and "already holds the demo backtests" in second.output

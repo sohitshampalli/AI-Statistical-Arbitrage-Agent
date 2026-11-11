@@ -18,8 +18,10 @@ all lie before the window's first bar:
 - rolling: for each bar, an OLS fit on the `formation` rows just before it.
 - kalman:  a Kalman filter started from the formation OLS fit (its estimate and
            covariance), with the formation residual variance as observation
-           noise and a forgetting factor; it then updates every bar. The values
-           used on a bar are the forecasts made before that bar.
+           noise and a forgetting factor; it then updates every bar. alpha and
+           beta on a bar are the forecasts made before that bar; sigma is the
+           filter's standard deviation of the bar's spread given those
+           forecasts and the bar's own log_b.
 - basket:  the first Johansen eigenvector on the formation rows, and the mean
            and standard deviation of that combination on the same rows.
 
@@ -126,8 +128,9 @@ def pair_signal_frame(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Parameters, spread and z for every bar of a pair, and a table of windows.
 
-    Every value on row t is computed from rows before t, except the spread and
-    z, which also use row t's own two prices.
+    alpha, beta and the weights on row t are computed from rows before t. The
+    spread and z also use row t's own two prices, and for the Kalman variant
+    sigma uses row t's log_b. No value on row t uses a later row.
 
     Args:
         log_a, log_b: Log total-return prices with identical indexes. Every
@@ -141,7 +144,10 @@ def pair_signal_frame(
     Returns:
         (signals, windows). signals has columns window, window_last, alpha,
         beta, sigma, spread, z, tradeable, weight_a, weight_b. windows has one
-        row per trading window.
+        row per trading window with its dates and the OLS fit on its formation
+        rows (formation_alpha, formation_beta, formation_sigma). For the static
+        variant that fit is what is traded; for rolling and Kalman it is only
+        the starting point, and the values traded each bar are in signals.
     """
     if hedge not in HEDGES:
         raise ValueError(f"hedge must be one of {HEDGES}, got {hedge!r}")
@@ -171,9 +177,9 @@ def pair_signal_frame(
             "trade_start": index[t0],
             "trade_end": index[t1 - 1],
             "n_bars": t1 - t0,
-            "alpha": np.nan,
-            "beta": np.nan,
-            "sigma": np.nan,
+            "formation_alpha": np.nan,
+            "formation_beta": np.nan,
+            "formation_sigma": np.nan,
         }
         records.append(record)
         if np.ptp(x[lo:t0]) == 0.0:
@@ -182,7 +188,10 @@ def pair_signal_frame(
         # asof is the first trading bar: the fit sees the formation rows only.
         fit = ols_hedge_ratio(form_a, form_b, index[t0])
         resid_sd = ols_residual_sd(form_a, form_b, fit)
-        record.update(alpha=fit.alpha, beta=fit.beta, sigma=resid_sd)
+        record.update(
+            formation_alpha=fit.alpha, formation_beta=fit.beta,
+            formation_sigma=resid_sd,
+        )
         if hedge == "static":
             alpha[t0:t1], beta[t0:t1], sigma[t0:t1] = fit.alpha, fit.beta, resid_sd
         elif hedge == "kalman" and resid_sd > 0.0:

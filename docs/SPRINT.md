@@ -232,10 +232,53 @@ offline mock mode for tests. No call to the paid Claude API.
   test-period lock now compares the file on disk with the blob in HEAD, so a git
   index flag cannot hide an uncommitted unlock flag or an edited plan, and an
   empty PREREGISTRATION.md does not count.
+- 2026-11-11. Review 1 fixes applied (see Reviews): headline restricted to
+  pre-registered runs, one per pair, with validation as its out-of-sample span;
+  screened-and-dropped candidates count as trials; the demo screens before it
+  backtests; config defaults validated; exposure metrics added. 670 fast tests
+  pass. Still no real-data backtest.
 
 ## Reviews
 
-None yet.
+### Review 1: backtester, walk-forward logic and the lock (2026-11-11)
+
+Reviewer: a separate subagent given only the brief, the configs and the code
+(it was told not to read STATUS, SPRINT or HANDOFF). It was run before any
+real-data backtest. It re-booked the ledger independently for all three hedge
+variants (largest profit difference 0.0), checked that position[t] equals
+decision[t - 1] on every bar, cross-checked the metrics against scipy and
+reproduced the published Deflated Sharpe example (expected maximum 0.11317,
+Deflated Sharpe 0.90040).
+
+Verdict: sign-off after fixes. Engine, ledger, z-score rule, estimators and
+metric formulas were signed off as they stood: no look-ahead, accounting or
+formula defect was found. Every defect that could change a reported number was in
+the summary and headline layer, plus one hole in the lock's git check.
+
+Findings and what was done:
+
+| # | Finding | Action |
+|---|---|---|
+| F1 | The headline reported formation and full spans next to validation; those spans overlap the rows the screen used, so they are in sample for a screened pair | Fixed. Runs and summary record `spans_in_sample_for_screen`; the headline names validation as its out-of-sample span; placebo ranks are given per span |
+| F2 | A pair backtested twice (or with legs swapped) was held twice in the headline portfolio | Fixed. One run per ticker set, oldest first; ignored duplicates are listed |
+| F3 | The headline said "no pair passed the screen" when pairs had not been screened at all; the demo did not screen real pairs | Fixed. The demo screens any pair with no analysis before backtesting it; the statement distinguishes nothing stored, not analysed and failed |
+| F4 | User-chosen (exploratory) pairs could enter the headline | Fixed. The headline holds only pre-registered case-study runs; screened exploratory runs are listed separately |
+| F5 | The lock trusted `git status`, which a git index flag can blind; an empty PREREGISTRATION.md was accepted | Fixed in commit 03f91a3: the file on disk must hash to the blob in HEAD, and the plan must contain text |
+| F6 | The trial count ignored candidates that were screened and dropped; the headline had no Deflated Sharpe or beta | Fixed. A real candidate analysed but never backtested counts as one trial with an unknown Sharpe; the headline has its own Deflated Sharpe and beta to SPY |
+| F7 | A position open on the last bar never pays its exit cost and is not in the trade statistics | Kept, and reported: each run stores `open_at_end` with the cost not charged. Force-closing would make the last rows depend on where the data ends |
+| F8 | The basket is not dollar-neutral and trades windows where Johansen finds no relation | Kept as designed and stated as a limitation; net exposure is now a reported metric and each run has a beta to SPY |
+| F9 | The config loader accepted a default cost or hedge that the demo never runs | Fixed. The loader refuses both |
+| F10 | Docstrings said the Kalman sigma on a bar is known the bar before; it uses that bar's log_b | Fixed the docstrings and added a test of which values on a row may use that row. No tradable look-ahead: decisions fill at the next bar |
+| F11 | Backtest trials hard-coded "test period not touched" | Fixed. The flag is derived from the as-of date; a test shows the runner refuses an as-of date past the lock |
+| F12 | Minor: the windows table showed the formation fit under names that suggested traded values; run.json is not hash-checked; one-bar trades at window ends; data checks cover the whole window | Columns renamed to `formation_*`; the one-bar trade is pinned by a test and documented as a cost of the rule; the other two are noted as limitations |
+
+Tests added for the untested paths it listed: git index flags and an empty plan
+on the lock; duplicate and swapped runs in the headline; the three empty-headline
+statements; a locked as-of date in the runner; an engine failure logged as an
+error; equity at or below zero; config defaults outside their lists; which
+values on a row use that row; beta-neutral sizing with a moving hedge ratio; a
+constant leg; three assets with two short legs, costs and dividends; the one-bar
+window-end trade.
 
 ## Proposed changes
 

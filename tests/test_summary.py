@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import math
 
 import numpy as np
@@ -35,6 +36,8 @@ def make_result() -> BacktestResult:
             "ret": PNL / CAPITAL,
             "gross_ret": (PNL + 1.5) / CAPITAL,
             "traded_notional": [0, 0, 1000, 0, 0, 1000, 1000, 0, 1000, 0],
+            "gross_exposure": [0, 0, 1000, 1100, 900, 0, 1000, 1000, 0, 0],
+            "net_exposure": [0, 0, 0, 100, -50, 0, 0, -30, 0, 0],
         },
         index=INDEX,
     )
@@ -69,6 +72,9 @@ def test_full_span_starts_at_the_first_signal_bar() -> None:
     assert out["average_holding_bars"] == 2.5
     assert out["exit_reasons"] == {"exit": 1, "time_stop": 1}
     assert out["share_in_market"] == pytest.approx(5 / 8)
+    # five days with a position: gross 1000, 1100, 900, 1000, 1000; |net| 0, 100, 50, 0, 30
+    assert out["average_gross_exposure"] == pytest.approx(1.0)
+    assert out["average_abs_net_exposure"] == pytest.approx(0.036)
     assert out["annual_turnover"] == pytest.approx(4000 / 1000 * 252 / 8)
     assert out["cost_drag"] == pytest.approx(1.5 / CAPITAL * 252)
     assert out["trade_cost_return"] == pytest.approx(8 * 1.0 / CAPITAL)
@@ -123,3 +129,24 @@ def test_simple_returns() -> None:
     out = simple_returns(tr)
     assert list(out.index) == list(INDEX[1:3])
     np.testing.assert_allclose(out, [0.10, -0.10])
+
+
+def test_never_in_the_market_gives_undefined_exposure() -> None:
+    result = make_result()
+    flat = result.daily.assign(position=0)
+    out = span_metrics(dataclasses.replace(result, daily=flat))
+    assert out["share_in_market"] == 0.0
+    assert math.isnan(out["average_gross_exposure"])
+    assert math.isnan(out["average_abs_net_exposure"])
+
+
+def test_losing_all_the_capital_is_a_full_drawdown() -> None:
+    """Equity at or below zero: the drawdown is reported as 100 percent and the
+    Calmar ratio as undefined, instead of raising."""
+    result = make_result()
+    wiped = result.daily.copy()
+    wiped["pnl"] = [0.0, 0.0, -600.0, -500.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    wiped["ret"] = wiped["pnl"] / CAPITAL
+    out = span_metrics(dataclasses.replace(result, daily=wiped))
+    assert out["max_drawdown"] == 1.0 and math.isnan(out["calmar"])
+    assert out["total_return"] == pytest.approx(-1.09)

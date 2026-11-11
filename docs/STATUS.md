@@ -468,3 +468,17 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   to the same git blob as the copy in HEAD, and PREREGISTRATION.md must contain
   text. No test-period data existed on disk and nothing was unlocked; this closes
   a path that needed a deliberate git command.
+- After the independent review (docs/SPRINT.md, Review 1): the screen uses all of
+  the formation period, so for a pair shown because it passed, the formation and
+  full spans are in sample and only the validation span is out of sample; runs and
+  summaries record this. The headline is the pre-registered case-study pairs and
+  basket that passed the screen, at the default hedge and cost, one run per pair;
+  exploratory pairs never enter it. Deflated Sharpe trial count: counted real-data
+  backtests plus real candidates that were analysed and never backtested. Known
+  limitations kept as they are: a position open on the last bar is marked to
+  market without its exit cost (each run stores the amount); the basket trades the
+  raw Johansen eigenvector, which is not dollar-neutral, in every window whatever
+  the Johansen rank; an entry on the bar before a window end is a one-bar trade
+  paying costs twice; run.json itself is not hash-checked, only its tables; data
+  checks cover the whole 2010 to 2021 window, so a late data problem also removes
+  the formation-span result.

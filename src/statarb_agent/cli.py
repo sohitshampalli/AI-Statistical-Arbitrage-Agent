@@ -272,7 +272,7 @@ def format_span(name: str, metrics: dict[str, Any] | None, deflated: Any) -> str
     if deflated:
         line += (
             f", Deflated Sharpe {format_number(deflated['dsr'])} "
-            f"({deflated['n_trials']} trials)"
+            f"({deflated['n_trials']} trials so far)"
         )
     return line
 
@@ -303,6 +303,12 @@ def format_run(record: RunRecord) -> str:
     for span in ("formation", "validation", "full"):
         add(format_span(span, man["metrics"].get(span), deflated.get(span)))
     add("Costs are included. Walk-forward: each window is fitted on earlier rows only.")
+    add(
+        "The screen used all of the formation period, so for a pair shown because it "
+        "passed, only the validation span is out of sample."
+    )
+    if man.get("open_at_end", {}).get("open"):
+        add("A position was still open on the last bar; its exit cost is not charged.")
     add(f"Trial log and run id: {record.run_id}")
     return "\n".join(lines)
 

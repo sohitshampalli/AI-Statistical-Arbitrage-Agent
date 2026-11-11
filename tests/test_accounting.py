@@ -214,6 +214,35 @@ def test_three_assets() -> None:
     assert list(ledger.trades.columns[-3:]) == ["notional_X", "notional_Y", "notional_Z"]
 
 
+def test_three_assets_with_two_short_legs_costs_and_dividends() -> None:
+    """Long the spread with weights 0.5, -0.3, -0.2 on capital 1000.
+
+    Bar 1: buy 500 of X at 10 (50 shares), short 300 of Y at 20 (-15), short 200
+           of Z at 40 (-5). Cost 10 bps on 1000 = 1.
+    Bar 2: X 10 -> 11: +50. Z 40 -> 38: +10 on the short. Y pays 0.5 a share:
+           owed on 15 short shares, -7.5. X pays 0.1: +5. Borrow at 360 bps a
+           year on 500 short for one day: 0.05.
+           pnl 50 + 10 - 7.5 + 5 - 0.05 = 57.45.
+    """
+    index = pd.date_range("2020-01-01", periods=3, freq="D", name="date")
+    close = np.array([[10.0, 20.0, 40.0], [10.0, 20.0, 40.0], [11.0, 20.0, 38.0]])
+    dist = np.zeros((3, 3))
+    dist[2] = [0.1, 0.5, 0.0]
+    ledger = simulate_ledger(
+        index, close, dist, np.array([1, 1, 1]), np.tile([0.5, -0.3, -0.2], (3, 1)),
+        labels=("X", "Y", "Z"), capital=1000.0, gross_exposure=1.0, costs=COSTS,
+    )
+    d = ledger.daily
+    assert list(d[["shares_X", "shares_Y", "shares_Z"]].iloc[1]) == [50.0, -15.0, -5.0]
+    assert d["trade_cost"].iloc[1] == pytest.approx(1.0)
+    assert d["price_pnl"].iloc[2] == pytest.approx(60.0)
+    assert d["dist_pnl"].iloc[2] == pytest.approx(-2.5)
+    assert d["borrow_cost"].iloc[2] == pytest.approx(0.05)
+    assert d["pnl"].iloc[2] == pytest.approx(57.45)
+    assert d["net_exposure"].iloc[1] == pytest.approx(0.0)
+    assert d["gross_exposure"].iloc[2] == pytest.approx(550 + 300 + 190)
+
+
 def test_no_trades_gives_an_empty_typed_trade_list() -> None:
     ledger = run(target=np.zeros(6, dtype=int))
     assert len(ledger.trades) == 0 and "net_pnl" in ledger.trades.columns

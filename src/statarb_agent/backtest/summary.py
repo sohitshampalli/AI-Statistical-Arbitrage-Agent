@@ -54,8 +54,11 @@ def span_metrics(
         annualised_volatility, sharpe, sharpe_per_period, gross_sharpe,
         sortino, max_drawdown, calmar, skewness, kurtosis, psr_zero, n_trades,
         hit_rate, average_holding_bars, annual_turnover, cost_drag,
-        beta_to_benchmark, share_in_market, price_return, distribution_return,
-        trade_cost_return, borrow_cost_return, exit_reasons.
+        beta_to_benchmark, share_in_market, average_gross_exposure,
+        average_abs_net_exposure (both as fractions of capital, averaged over
+        the days with a position; NaN if never in the market), price_return,
+        distribution_return, trade_cost_return, borrow_cost_return,
+        exit_reasons.
     """
     daily = result.daily
     capital = float(result.settings["capital"])
@@ -78,6 +81,13 @@ def span_metrics(
     beta = NAN
     if benchmark is not None and rows.index.isin(benchmark.index).all():
         beta = m.beta_to_benchmark(ret, benchmark.loc[rows.index].to_numpy(dtype=float))
+    held = rows.loc[rows["position"] != 0]
+    gross_exposure = (
+        float(held["gross_exposure"].mean() / capital) if len(held) else NAN
+    )
+    net_exposure = (
+        float(held["net_exposure"].abs().mean() / capital) if len(held) else NAN
+    )
     per_period = m.sharpe_per_period(ret)
     skew, kurt = m.skewness(ret), m.kurtosis(ret)
     try:
@@ -112,6 +122,8 @@ def span_metrics(
         "cost_drag": m.cost_drag(gross, ret),
         "beta_to_benchmark": beta,
         "share_in_market": float((rows["position"] != 0).mean()),
+        "average_gross_exposure": gross_exposure,
+        "average_abs_net_exposure": net_exposure,
         "price_return": float(rows["price_pnl"].sum() / capital),
         "distribution_return": float(rows["dist_pnl"].sum() / capital),
         "trade_cost_return": float(rows["trade_cost"].sum() / capital),

@@ -102,6 +102,16 @@ def test_window_end_forces_flat_and_clears_the_block() -> None:
     assert run([0.0, -2.5], window_last=[1])[0] == [0, 0]
 
 
+def test_entry_on_the_bar_before_a_window_end_is_a_one_bar_trade() -> None:
+    """Known cost of the rule: an entry decided on the second-to-last bar of a
+    window is filled on the last bar and closed on the next, paying entry and
+    exit costs for one bar of exposure. The rule allows it; this test pins that
+    behaviour so a change to it is deliberate."""
+    target, reason = run([0.0, -2.5, -2.6, -2.7], window_last=[2])
+    assert target == [0, 1, 0, 1]
+    assert reason == ["", "entry_long", "window_end", "entry_long"]
+
+
 def test_untradeable_or_nan_bars_force_flat_and_never_enter() -> None:
     target, reason = run([-2.5, -2.4, -2.3, -2.2], tradeable=[True, True, False, True])
     assert target == [1, 1, 0, 1]

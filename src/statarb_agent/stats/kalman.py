@@ -16,9 +16,12 @@ Both coefficients follow a random walk. Each row does two steps:
               m   = m_pred + K e
               P   = (I - K H) P_pred (I - K H)' + K R K'    (Joseph form)
 
-m_pred and P_pred for row t use rows before t only, so alpha_pred[t],
-beta_pred[t], and Q[t] are forecasts available at the close of t - 1. The
-innovation e[t] also needs row t's two prices, and nothing later.
+m_pred and P_pred for row t use rows before t only, so alpha_pred[t] and
+beta_pred[t] are forecasts available at the close of t - 1. The innovation
+variance Q[t] also uses row t's log_b (through H), and the innovation e[t] uses
+both of row t's prices. Nothing on row t uses a later row. A signal computed
+from e[t] and Q[t] is therefore known at the close of bar t, like any signal in
+this project, and is acted on at bar t + 1.
 
 The state noise W[t] is given in one of two ways:
 
@@ -97,7 +100,8 @@ def kalman_hedge(
         DataFrame indexed like the rows before `asof`, with columns:
         alpha_pred, beta_pred: state forecast for row t from rows before t.
         innovation: log_a[t] minus its forecast.
-        innovation_var: forecast variance Q[t] of that innovation.
+        innovation_var: variance Q[t] of that innovation given rows before t
+            and row t's log_b.
         alpha, beta: state after row t's update.
         alpha_var, beta_var: diagonal of the covariance after the update.
 

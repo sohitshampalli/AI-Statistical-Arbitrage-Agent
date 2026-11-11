@@ -18,8 +18,9 @@ from statarb_agent.backtest.controls import (
     summarise_batch,
 )
 from statarb_agent.backtest.engine import run_pair_backtest
-from statarb_agent.backtest.summary import span_metrics
+from statarb_agent.backtest.summary import span_metrics, study_span_metrics
 from statarb_agent.data.synthetic import as_price_frame, simulate_cointegrated_pair
+from statarb_agent.study import Period, StudyConfig
 
 
 def paying_frame(n: int = 300, seed: int = 0) -> pd.DataFrame:
@@ -110,6 +111,21 @@ def test_run_batch_matches_single_runs(bt_config) -> None:
         single["price_return"] + single["distribution_return"]
     )
     assert row["n_trades"] == single["n_trades"]
+    assert batch[["sharpe_formation", "sharpe_validation"]].isna().all().all()
+    study = StudyConfig(
+        formation=Period(pd.Timestamp("2010-01-01"), pd.Timestamp("2011-12-31")),
+        validation=Period(pd.Timestamp("2012-01-01"), pd.Timestamp("2012-12-31")),
+        test_start=pd.Timestamp("2022-01-01"),
+        test_period_unlocked=False,
+    )
+    spans = run_batch(make, range(102, 103), asof="2100-01-01", config=config, study=study)
+    result = run_pair_backtest(a, b, asof="2100-01-01", config=config)
+    expected = study_span_metrics(result, study)
+    assert spans["sharpe_formation"].iloc[0] == pytest.approx(expected["formation"]["sharpe"])
+    assert spans["sharpe_validation"].iloc[0] == pytest.approx(
+        expected["validation"]["sharpe"]
+    )
+    assert spans["sharpe"].iloc[0] == pytest.approx(row["sharpe"])
     free = run_batch(make, range(100, 104), asof="2100-01-01", config=config, cost_bps=0.0)
     assert (free["total_return"] > batch["total_return"]).all()
     np.testing.assert_allclose(free["gross_return"], batch["gross_return"])
@@ -126,6 +142,8 @@ def test_summarise_batch_by_hand() -> None:
             "n_trades": [10, 4, 0, 6],
             "hit_rate": [0.7, 0.4, math.nan, 0.5],
             "share_in_market": [0.3, 0.2, 0.0, 0.25],
+            "sharpe_formation": [math.nan] * 4,
+            "sharpe_validation": [math.nan] * 4,
         }
     )
     out = summarise_batch(batch)

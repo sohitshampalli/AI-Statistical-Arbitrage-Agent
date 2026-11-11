@@ -48,6 +48,8 @@ def test_project_config_loads_with_the_documented_values() -> None:
         ("variants: [static, rolling, kalman]", "variants: [static, static]"),
         ("variants: [static, rolling, kalman]", "variants: []"),
         ("variants: [static, rolling, kalman]", "variants: static"),
+        ("variants: [static, rolling, kalman]", "variants: [rolling, kalman]"),
+        ("cost_bps_per_leg: 10", "cost_bps_per_leg: 5"),
         ("kalman_memory_days: 252", "kalman_memory_days: 1"),
         ("capital: 1000000", "capital: 0"),
         ("gross_exposure: 1.0", "gross_exposure: -1"),

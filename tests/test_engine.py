@@ -69,7 +69,8 @@ def test_static_parameters_come_from_the_formation_rows(pair: pd.DataFrame) -> N
         row = windows.iloc[k]
         assert row["formation_start"] == pair.index[t0 - 252]
         assert row["formation_end"] == pair.index[t0 - 1]
-        assert row["trade_start"] == pair.index[t0] and row["beta"] == fit.beta
+        assert row["trade_start"] == pair.index[t0]
+        assert row["formation_beta"] == fit.beta and row["formation_sigma"] == sd
         t = t0 + 5
         expected = (pair["log_a"].iloc[t] - fit.alpha - fit.beta * pair["log_b"].iloc[t]) / sd
         assert signals["z"].iloc[t] == pytest.approx(expected, rel=1e-12)
@@ -275,6 +276,85 @@ def test_errors(legs: tuple[pd.DataFrame, pd.DataFrame], bt_config) -> None:
     bad.iloc[5, 0] = -1.0
     with pytest.raises(ValueError, match="non-positive"):
         run_pair_backtest(bad, b, asof=ASOF, config=config)
+
+
+@pytest.mark.parametrize("hedge", HEDGES)
+def test_which_values_on_a_row_use_that_row(pair: pd.DataFrame, hedge: str) -> None:
+    """Look-ahead test at the level of one row: change only row t's prices.
+
+    No earlier row may change. On row t, alpha, beta and the weights may not
+    change (they are forecasts from earlier rows); spread and z may. sigma on
+    row t may change only for the Kalman variant, and only through log_b[t].
+    """
+    kwargs = {"hedge": hedge, "formation": 252, "trading": 63, "neutrality": "beta",
+              "kalman_discount": 1.0 - 1.0 / 252}
+    base, _ = pair_signal_frame(pair["log_a"], pair["log_b"], **kwargs)
+    for t in (252, 300, 566):
+        only_a = pair["log_a"].copy()
+        only_a.iloc[t] += 0.05
+        moved_a, _ = pair_signal_frame(only_a, pair["log_b"], **kwargs)
+        only_b = pair["log_b"].copy()
+        only_b.iloc[t] += 0.05
+        moved_b, _ = pair_signal_frame(pair["log_a"], only_b, **kwargs)
+        forecasts = ["alpha", "beta", "weight_a", "weight_b"]
+        for moved in (moved_a, moved_b):
+            pd.testing.assert_frame_equal(moved.iloc[:t], base.iloc[:t], check_exact=True)
+            pd.testing.assert_series_equal(
+                moved.iloc[t][forecasts], base.iloc[t][forecasts], check_exact=True
+            )
+            assert moved["z"].iloc[t] != base["z"].iloc[t]
+        assert moved_a["sigma"].iloc[t] == base["sigma"].iloc[t]
+        if hedge == "kalman":
+            assert moved_b["sigma"].iloc[t] != base["sigma"].iloc[t]
+        else:
+            assert moved_b["sigma"].iloc[t] == base["sigma"].iloc[t]
+
+
+@pytest.mark.parametrize("hedge", ("rolling", "kalman"))
+def test_beta_neutral_sizing_with_a_moving_hedge_ratio(
+    legs: tuple[pd.DataFrame, pd.DataFrame], bt_config, hedge: str
+) -> None:
+    """The hedge ratio moves every bar, but a trade keeps the shares it entered
+    with: the split is fixed by beta on the bar of the entry decision."""
+    result = run_pair_backtest(
+        *legs, asof=ASOF, config=bt_config(neutrality="beta"), hedge=hedge
+    )
+    closed = result.trades.loc[~result.trades["open"]]
+    assert len(closed) > 3
+    for _, trade in closed.head(5).iterrows():
+        beta = result.signals.loc[trade["entry_signal_date"], "beta"]
+        assert -trade["notional_B"] / trade["notional_A"] == pytest.approx(beta)
+        held = result.daily.loc[
+            (result.daily.index >= trade["entry_date"])
+            & (result.daily.index < trade["exit_date"])
+        ]
+        assert held["shares_A"].nunique() == 1 and held["shares_B"].nunique() == 1
+        betas = result.signals.loc[held.index, "beta"]
+        if len(betas) > 2:
+            assert betas.nunique() > 1  # the estimate did move during the trade
+
+
+@pytest.mark.parametrize("hedge", HEDGES)
+def test_a_constant_leg_in_a_formation_window_is_not_traded(
+    pair: pd.DataFrame, bt_config, hedge: str
+) -> None:
+    """If log_b does not move in a formation window, beta is not identified;
+    the window is flat and nothing raises."""
+    log_b = pair["log_b"].copy()
+    log_b.iloc[:252] = log_b.iloc[0]
+    result = run_pair_backtest(
+        as_price_frame(pair["log_a"]), as_price_frame(log_b), asof=ASOF,
+        config=bt_config(), hedge=hedge,
+    )
+    first_window = result.signals.iloc[252:315]
+    if hedge == "rolling":
+        # only the first bar's 252-row fit lies entirely in the constant stretch
+        assert not first_window["tradeable"].iloc[0]
+    else:
+        assert not first_window["tradeable"].any()
+        assert np.isnan(result.windows.iloc[0]["formation_beta"])
+    assert (result.daily["position"].iloc[:254] == 0).all()
+    assert result.signals["tradeable"].iloc[400:].any()  # later windows trade again
 
 
 # Basket ----------------------------------------------------------------------

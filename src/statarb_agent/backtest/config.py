@@ -99,6 +99,10 @@ class BacktestConfig:
             raise ValueError(f"hedge variants must be chosen from {HEDGES}")
         if len(set(self.hedge_variants)) != len(self.hedge_variants):
             raise ValueError("hedge variants lists a variant twice")
+        if self.hedge_default not in self.hedge_variants:
+            # The demo runs the variants; the headline is the default. A default
+            # that is never run would leave the headline empty without saying why.
+            raise ValueError("the default hedge must be one of the hedge variants")
         if self.kalman_memory_days < 2:
             raise ValueError("kalman_memory_days must be at least 2")
         if self.neutrality not in NEUTRALITIES:
@@ -111,6 +115,10 @@ class BacktestConfig:
             not (math.isfinite(c) and c >= 0) for c in self.cost_sensitivity_bps
         ):
             raise ValueError("cost sensitivity levels must be finite and >= 0")
+        if self.cost_bps_per_leg not in self.cost_sensitivity_bps:
+            raise ValueError(
+                "the default cost per leg must be one of the cost sensitivity levels"
+            )
         self.cost_model()  # validates the cost numbers
 
     def cost_model(self, cost_bps: float | None = None) -> CostModel:

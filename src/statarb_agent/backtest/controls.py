@@ -46,17 +46,18 @@ from statarb_agent.backtest.engine import (
     run_basket_backtest,
     run_pair_backtest,
 )
-from statarb_agent.backtest.summary import span_metrics
+from statarb_agent.backtest.summary import span_metrics, study_span_metrics
 from statarb_agent.data.synthetic import (
     as_price_frame,
     simulate_cointegrated_pair,
     simulate_random_walk_pair,
 )
 from statarb_agent.sources.prices import total_return_index
+from statarb_agent.study import StudyConfig
 
 BATCH_COLUMNS = (
     "seed", "sharpe", "gross_sharpe", "total_return", "gross_return", "n_trades",
-    "hit_rate", "share_in_market",
+    "hit_rate", "share_in_market", "sharpe_formation", "sharpe_validation",
 )
 
 
@@ -165,11 +166,19 @@ def simulated_pair_frames(
     return as_price_frame(data["log_a"]), as_price_frame(data["log_b"])
 
 
-def _row(seed: int, result: BacktestResult) -> dict[str, Any]:
+def _row(seed: int, result: BacktestResult, study: StudyConfig | None) -> dict[str, Any]:
     metrics = span_metrics(result)
     if metrics is None:
         raise ValueError("the backtest has no rows after the first signal bar")
+    by_span: dict[str, float] = {"formation": math.nan, "validation": math.nan}
+    if study is not None:
+        spans = study_span_metrics(result, study)
+        for name in by_span:
+            if spans[name] is not None:
+                by_span[name] = spans[name]["sharpe"]
     return {
+        "sharpe_formation": by_span["formation"],
+        "sharpe_validation": by_span["validation"],
         "seed": seed,
         "sharpe": metrics["sharpe"],
         "gross_sharpe": metrics["gross_sharpe"],
@@ -191,6 +200,7 @@ def run_batch(
     config: BacktestConfig,
     hedge: str | None = None,
     cost_bps: float | None = None,
+    study: StudyConfig | None = None,
 ) -> pd.DataFrame:
     """Backtest one pair or basket per seed and collect the full-span metrics.
 
@@ -200,6 +210,9 @@ def run_batch(
         seeds: Seeds to run.
         asof, config, hedge, cost_bps: As for run_pair_backtest. `hedge` is
             ignored for a basket.
+        study: If given, the net Sharpe ratio is also reported for the
+            formation and the validation period (sharpe_formation,
+            sharpe_validation); otherwise those columns are NaN.
 
     Returns:
         One row per seed with the columns in BATCH_COLUMNS. Returns are over
@@ -217,7 +230,7 @@ def run_batch(
             result = run_pair_backtest(
                 a, b, asof=asof, config=config, hedge=hedge, cost_bps=cost_bps
             )
-        rows.append(_row(seed, result))
+        rows.append(_row(seed, result, study))
     return pd.DataFrame(rows, columns=list(BATCH_COLUMNS))
 
 

@@ -22,7 +22,23 @@ analysis.
 Which trials count for the Deflated Sharpe ratio: backtest trials with outcome
 "ok" on downloaded data, except placebo and control batches. Simulated runs are
 not attempts to find a real edge and are left out; the unrelated control pair
-is real data and is counted.
+is real data and is counted. A real pair or basket that was analysed (screened)
+but never backtested also counts as one attempt, with an unknown Sharpe ratio:
+looking at a candidate and dropping it is a try.
+
+What is out of sample. The screen is one analysis of the formation period
+(2010 to 2017). A walk-forward window is always fitted on earlier rows, but a
+pair that is shown because it passed the screen was selected using all of the
+formation period, so its formation-span and full-span results are in sample
+with respect to that selection. Only the validation span is out of sample for a
+screened pair. Every run records this in `spans_in_sample_for_screen`, and the
+headline of the summary reports the validation span as its result.
+
+The headline is the strategy as stated in advance: the pairs and the basket
+named in configs/pairs.yaml with the label case_study, at the default hedge and
+cost, that passed the formation screen. Pairs chosen by the user (exploratory)
+never enter it, whatever their screen result, and each pair enters at most
+once.
 """
 
 from __future__ import annotations
@@ -58,10 +74,13 @@ from statarb_agent.backtest.summary import (
 )
 from statarb_agent.sources.prices import SOURCE
 from statarb_agent.sources.tickers import normalise_ticker
+from statarb_agent.study import TEST_START
 from statarb_agent.trials import Trial, new_trial_id
 
 SPANS = ("full", "formation", "validation")
 PERIOD_NAME = "formation+validation"
+IN_SAMPLE_FOR_SCREEN = ("full", "formation")
+OUT_OF_SAMPLE_SPAN = "validation"
 SIMULATED_LABELS = {
     "cointegrated": ("SIM_A", "SIM_B"),
     "random_walk": ("RW_A", "RW_B"),
@@ -127,8 +146,35 @@ def counts_for_deflation(trial: Trial) -> bool:
     )
 
 
+def screened_not_backtested(trials: list[Trial]) -> list[tuple[str, ...]]:
+    """Real ticker sets that were analysed but have no counted backtest.
+
+    Each is a candidate that was looked at and not pursued. Order of the
+    tickers does not matter: (A, B) and (B, A) are one candidate.
+    """
+    analysed: dict[frozenset[str], tuple[str, ...]] = {}
+    backtested: set[frozenset[str]] = set()
+    for trial in trials:
+        key = frozenset(trial.tickers)
+        if counts_for_deflation(trial):
+            backtested.add(key)
+        elif (
+            trial.kind in ("pair_analysis", "basket_analysis")
+            and trial.outcome == "ok"
+            and trial.data_source == SOURCE
+        ):
+            analysed.setdefault(key, trial.tickers)
+    return [tickers for key, tickers in analysed.items() if key not in backtested]
+
+
 def trial_sharpes(trials: list[Trial], span: str) -> np.ndarray:
-    """Per-period Sharpe ratio of every counted trial on one span (NaN if none)."""
+    """Per-period Sharpe ratio of every counted attempt on one span.
+
+    One entry per counted backtest trial (NaN if its Sharpe ratio is undefined
+    on the span), plus one NaN per real candidate that was analysed but never
+    backtested. NaN entries add to the number of trials and not to the
+    variance of trial Sharpe ratios.
+    """
     values = []
     for trial in trials:
         if not counts_for_deflation(trial):
@@ -136,6 +182,7 @@ def trial_sharpes(trials: list[Trial], span: str) -> np.ndarray:
         metrics = (trial.results.get("metrics") or {}).get(span) or {}
         value = metrics.get("sharpe_per_period")
         values.append(float("nan") if value is None else float(value))
+    values.extend([float("nan")] * len(screened_not_backtested(trials)))
     return np.array(values, dtype=float)
 
 
@@ -209,7 +256,12 @@ class Backtester:
             data_source=data_source,
             survivorship_bias=data_source == SOURCE,
             snapshot_ids=snapshot_ids,
-            test_period_touched=False,
+            # Derived, not assumed: a run whose as-of date lies after the start
+            # of the test period has read test-period rows. Building such a
+            # trial fails unless the unlock commits are recorded with it.
+            test_period_touched=bool(
+                data_source == SOURCE and self.asof > TEST_START
+            ),
             outcome=outcome,
             reason=reason,
             parameters=parameters,
@@ -318,6 +370,19 @@ class Backtester:
         deflated = (
             deflated_sharpes(spans, self.log.read()) if data_source == SOURCE else None
         )
+        open_trades = result.trades.loc[result.trades["open"]]
+        costs = self.config.cost_model(result.cost_bps)
+        last = result.daily.iloc[-1]
+        open_at_end = {
+            "open": bool(len(open_trades)),
+            "unrealised_net_pnl_return": (
+                float(open_trades["net_pnl"].sum() / self.config.capital)
+            ),
+            "exit_cost_not_charged_return": float(
+                last["gross_exposure"] * costs.cost_bps_per_leg * 1e-4
+                / self.config.capital
+            ),
+        }
         manifest = self._manifest(
             trial,
             {
@@ -331,20 +396,29 @@ class Backtester:
                 "downloaded": list(downloaded),
                 "first_signal_date": str(result.first_signal_date.date()),
                 "metrics": spans,
+                # These spans overlap the rows the screen was computed on, so
+                # for a pair shown because it passed the screen they are in
+                # sample with respect to that selection.
+                "spans_in_sample_for_screen": list(IN_SAMPLE_FOR_SCREEN),
+                # Deflated with the trials in the log when this run was made;
+                # the summary recomputes it with the final count.
                 "deflated_sharpe": deflated,
                 "n_windows": len(result.windows),
+                # A position still open on the last bar is marked to market and
+                # has not paid its exit cost; it is not in the trade statistics.
+                "open_at_end": open_at_end,
             },
         )
-        return self._store(
-            trial.trial_id, "backtest", manifest,
-            {
-                "daily": result.daily,
-                "trades": result.trades,
-                "signals": result.signals,
-                "windows": result.windows,
-                "prices": prices,
-            },
-        )
+        tables = {
+            "daily": result.daily,
+            "trades": result.trades,
+            "signals": result.signals,
+            "windows": result.windows,
+            "prices": prices,
+        }
+        if benchmark is not None:
+            tables["benchmark"] = benchmark.rename("ret").to_frame()
+        return self._store(trial.trial_id, "backtest", manifest, tables)
 
     @staticmethod
     def _prices(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
@@ -483,10 +557,25 @@ class Backtester:
         batch = run_batch(
             lambda seed: shuffle_pair(loaded.frames[a], loaded.frames[b], seed),
             seeds, asof=self.asof, config=self.config, hedge=hedge, cost_bps=cost_bps,
+            study=self.study,
         )
         summary = summarise_batch(batch)
-        real_sharpe = _nan(((real.manifest.get("metrics") or {}).get("full") or {}).get("sharpe"))
-        rank = placebo_rank(real_sharpe, batch["sharpe"].to_numpy(dtype=float))
+        real_metrics = real.manifest.get("metrics") or {}
+        real_sharpe = _nan((real_metrics.get("full") or {}).get("sharpe"))
+        # Rank on each span. For a pair that passed the screen only the
+        # validation span is out of sample (see the module docstring).
+        columns = {"full": "sharpe", "formation": "sharpe_formation",
+                   "validation": "sharpe_validation"}
+        rank = {
+            span: {
+                "real_sharpe": _nan((real_metrics.get(span) or {}).get("sharpe")),
+                **placebo_rank(
+                    _nan((real_metrics.get(span) or {}).get("sharpe")),
+                    batch[column].to_numpy(dtype=float),
+                ),
+            }
+            for span, column in columns.items()
+        }
         trial = self._record_trial(
             label="control", tickers=(a, b), data_source=SOURCE,
             snapshot_ids=loaded.snapshot_ids, outcome="ok", reason=None,
@@ -624,7 +713,8 @@ class Backtester:
         """Every pre-stated backtest: all demo pairs, the basket and the controls.
 
         - each demo pair (case studies and the unrelated control), each hedge
-          variant, each cost level;
+          variant, each cost level (its formation-period analysis is logged
+          first if the log has none);
         - the Johansen basket at each cost level (its formation-period Johansen
           analysis is logged first if the log has none);
         - the simulated cointegrated pair and the simulated random-walk pair,
@@ -642,6 +732,12 @@ class Backtester:
         records: list[RunRecord] = []
         real_default: dict[tuple[str, str], RunRecord] = {}
         for pair in self.analyser.pairs.pairs:
+            # The screen status must exist before the pair is backtested. A pair
+            # already analysed (the usual case) is not analysed again.
+            if screen_status(self.log.read(), (pair.a, pair.b))["status"] == "not_analysed":
+                self.analyser.analyse_pair(
+                    pair.a, pair.b, label=pair.label, offline=offline
+                )
             for hedge in cfg.hedge_variants:
                 for cost in cfg.cost_sensitivity_bps:
                     record = self.backtest_pair(
@@ -685,10 +781,9 @@ class Backtester:
 
         The summary reads only run folders and the trial log; it runs no
         backtest and is not a trial. For each real-data run it recomputes the
-        Deflated Sharpe ratio against all counted trials in the log now, so
-        every row uses the same, final trial count. The headline is the set of
-        real pairs that passed the formation screen, at the default hedge and
-        cost: the strategy as it was stated in advance.
+        Deflated Sharpe ratio against all counted attempts in the log now, so
+        every row uses the same, final trial count. See the module docstring
+        for what the headline is and which spans are out of sample.
         """
         trials = self.log.read()
         rows: list[dict[str, Any]] = []
@@ -705,27 +800,39 @@ class Backtester:
                     "hedge": manifest["hedge"],
                     "cost_bps": manifest["cost_bps"],
                     "data_source": manifest["data_source"],
+                    # The status from the trial log now, and the one stored
+                    # when the run was made (they differ only if the pair was
+                    # analysed after it was backtested).
                     "screen_status": screen_status(trials, tuple(manifest["tickers"]))[
                         "status"
                     ],
+                    "screen_status_at_run": manifest["screen"]["status"],
                     "metrics": manifest["metrics"],
                     "deflated_sharpe": (
                         deflated_sharpes(manifest["metrics"], trials) if real else None
                     ),
+                    "open_at_end": manifest.get("open_at_end"),
                 }
             )
         cfg = self.config
-        headline_rows = [
+        at_defaults = [
             r for r in rows
-            if r["data_source"] == SOURCE and r["label"] in ("case_study", "exploratory")
-            and r["screen_status"] == "pass"
+            if r["data_source"] == SOURCE
             and r["cost_bps"] == cfg.cost_bps_per_leg
             and r["hedge"] in (cfg.hedge_default, "johansen")
         ]
-        headline = self._headline(headline_rows)
+        candidates, duplicates = _one_run_per_ticker_set(
+            [r for r in at_defaults if r["label"] == "case_study"]
+        )
+        exploratory, _ = _one_run_per_ticker_set(
+            [r for r in at_defaults if r["label"] == "exploratory"]
+        )
+        headline = self._headline(candidates, trials)
+        headline["duplicate_run_ids_ignored"] = duplicates
         now = self.log.clock()
         run_id = new_trial_id(now)
         version = self.analyser.provenance()
+        not_backtested = screened_not_backtested(trials)
         manifest = {
             "kind": "summary",
             "created_at_utc": now.isoformat(),
@@ -735,46 +842,119 @@ class Backtester:
                 "config_hashes": version["config_hashes"],
             },
             "n_trials_in_log": len(trials),
-            "n_trials_counted": int(sum(counts_for_deflation(t) for t in trials)),
+            "n_backtests_counted": int(sum(counts_for_deflation(t) for t in trials)),
+            "screened_not_backtested": [list(t) for t in not_backtested],
+            "n_trials_counted": int(
+                sum(counts_for_deflation(t) for t in trials) + len(not_backtested)
+            ),
             "default_hedge": cfg.hedge_default,
             "default_cost_bps": cfg.cost_bps_per_leg,
+            "spans_in_sample_for_screen": list(IN_SAMPLE_FOR_SCREEN),
+            "out_of_sample_span": OUT_OF_SAMPLE_SPAN,
             "rows": rows,
             "headline": headline,
+            # Pairs the user chose that passed the screen. They are listed for
+            # information and are never part of the headline: which pairs were
+            # screened was the user's choice, possibly made after seeing results.
+            "exploratory_screened_run_ids": [
+                r["run_id"] for r in exploratory if r["screen_status"] == "pass"
+            ],
         }
         return self._store(run_id, "summary", manifest, {})
 
-    def _headline(self, rows: list[dict[str, Any]]) -> dict[str, Any]:
-        """Equal-weight portfolio of the screened runs, or an explicit empty result."""
+    def _headline(
+        self, candidates: list[dict[str, Any]], trials: list[Trial]
+    ) -> dict[str, Any]:
+        """The pre-stated strategy: an equal-weight portfolio of the screened runs.
+
+        `candidates` are the pre-registered runs at the default hedge and cost,
+        one per ticker set. The portfolio holds those whose screen status is
+        "pass". If there are none, the result is empty and the statement says
+        exactly why: nothing stored, not analysed yet, or analysed and failed.
+        """
+        status_counts: dict[str, int] = {}
+        for row in candidates:
+            status_counts[row["screen_status"]] = (
+                status_counts.get(row["screen_status"], 0) + 1
+            )
+        rows = [r for r in candidates if r["screen_status"] == "pass"]
+        base = {
+            "n_candidates": len(candidates),
+            "candidate_screen_status": status_counts,
+            "n_runs": len(rows),
+            "run_ids": [r["run_id"] for r in rows],
+            "out_of_sample_span": OUT_OF_SAMPLE_SPAN,
+            "spans_in_sample_for_screen": list(IN_SAMPLE_FOR_SCREEN),
+        }
         if not rows:
-            return {
-                "n_runs": 0,
-                "run_ids": [],
-                "metrics": None,
-                "statement": (
-                    "No real pair or basket passed the formation-period screen, so "
-                    "the strategy as stated in advance takes no positions. There is "
-                    "no headline return to report."
-                ),
-            }
-        dailies = [read_table(self.project.runs_dir, r["run_id"], "daily") for r in rows]
-        trades = [read_table(self.project.runs_dir, r["run_id"], "trades") for r in rows]
-        portfolio = equal_weight_portfolio(dailies, trades, self.config.capital)
+            unknown = sum(
+                n for status, n in status_counts.items() if status not in ("pass", "fail")
+            )
+            if not candidates:
+                statement = (
+                    "No pre-registered pair or basket has a stored backtest at the "
+                    "default hedge and cost, so there is no headline yet."
+                )
+            elif unknown:
+                statement = (
+                    f"{unknown} of the {len(candidates)} pre-registered candidates "
+                    "have no usable formation-period screen result (not analysed, "
+                    "refused or failed to run), so the headline cannot be stated "
+                    "yet. Run `statarb demo` to screen them."
+                )
+            else:
+                statement = (
+                    f"All {len(candidates)} pre-registered candidates were screened "
+                    "on the formation period and none passed, so the strategy as "
+                    "stated in advance takes no positions. There is no headline "
+                    "return to report."
+                )
+            return {**base, "metrics": None, "deflated_sharpe": None,
+                    "statement": statement}
+        runs_dir = self.project.runs_dir
+        dailies = [read_table(runs_dir, r["run_id"], "daily") for r in rows]
+        trades = [read_table(runs_dir, r["run_id"], "trades") for r in rows]
+        daily, pooled = equal_weight_portfolio(dailies, trades, self.config.capital)
+        benchmark = read_table(runs_dir, rows[0]["run_id"], "benchmark")["ret"]
         first = max(pd.Timestamp(r["metrics"]["full"]["start"]) for r in rows)
         result = BacktestResult(
             kind="portfolio", labels=tuple("+".join(r["tickers"]) for r in rows),
-            hedge="mixed", cost_bps=self.config.cost_bps_per_leg, daily=portfolio[0],
-            trades=portfolio[1], signals=pd.DataFrame(), windows=pd.DataFrame(),
+            hedge="mixed", cost_bps=self.config.cost_bps_per_leg, daily=daily,
+            trades=pooled, signals=pd.DataFrame(), windows=pd.DataFrame(),
             first_signal_date=first, settings={"capital": self.config.capital},
         )
+        spans = study_span_metrics(result, self.study, benchmark=benchmark)
         return {
-            "n_runs": len(rows),
-            "run_ids": [r["run_id"] for r in rows],
-            "metrics": study_span_metrics(result, self.study),
+            **base,
+            "metrics": spans,
+            "deflated_sharpe": deflated_sharpes(spans, trials),
             "statement": (
-                f"Equal-weight portfolio of the {len(rows)} screened runs at the "
-                "default hedge and cost."
+                f"Equal-weight portfolio of the {len(rows)} pre-registered candidates "
+                f"that passed the formation-period screen (of {len(candidates)}), at "
+                "the default hedge and cost. The validation span is its "
+                "out-of-sample result; the formation and full spans include the "
+                "rows the screen was computed on."
             ),
         }
+
+
+def _one_run_per_ticker_set(
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Keep the oldest run of each ticker set; return the others' run ids.
+
+    Rows arrive oldest first. (A, B) and (B, A) are the same set. A pair that
+    was backtested twice would otherwise be held twice in the portfolio.
+    """
+    kept: dict[frozenset[str], dict[str, Any]] = {}
+    duplicates: list[str] = []
+    for row in rows:
+        key = frozenset(row["tickers"])
+        if key in kept:
+            duplicates.append(row["run_id"])
+        else:
+            kept[key] = row
+    return list(kept.values()), duplicates
 
 
 def equal_weight_portfolio(
@@ -783,9 +963,9 @@ def equal_weight_portfolio(
     """Combine runs into one portfolio with the capital split equally.
 
     Each run was sized on the full capital, so the portfolio's daily profit is
-    the mean of the runs' daily profits. `position` is 1 on days when any run
-    holds a position. Trades are pooled; each trade's profit is divided by the
-    number of runs.
+    the mean of the runs' daily profits, and likewise its exposures. `position`
+    is 1 on days when any run holds a position. Trades are pooled; each trade's
+    profit is divided by the number of runs.
 
     Raises:
         ValueError: If there are no runs or their dates differ.
@@ -797,7 +977,7 @@ def equal_weight_portfolio(
         raise ValueError("the runs have different dates")
     n = len(dailies)
     columns = ("price_pnl", "dist_pnl", "borrow_cost", "trade_cost", "gross_pnl", "pnl",
-               "traded_notional")
+               "traded_notional", "gross_exposure", "net_exposure")
     daily = pd.DataFrame(
         {c: sum(d[c].to_numpy(dtype=float) for d in dailies) / n for c in columns},
         index=index,
