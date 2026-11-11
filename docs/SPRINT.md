@@ -206,6 +206,8 @@ offline mock mode for tests. No call to the paid Claude API.
   and `simulate_random_walk_pair` in the simulator.
 - 2026-11-11. B2 signal rule done: `signals/zscore.py`, a pure state machine with
   hand-worked tests and a prefix (look-ahead) test.
+- 2026-11-11. B5 metrics done: `backtest/metrics.py` with hand-computed tests,
+  including Probabilistic and Deflated Sharpe.
 
 ## Reviews
 

@@ -389,3 +389,10 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   broken spread is not re-entered at once. The last signal bar of each trading
   window forces flat and clears the block. No same-bar reversal. The decision at
   bar t uses z up to t and is executed at the next bar by the engine.
+- Metrics (`backtest/metrics.py`): returns are daily profit over a fixed capital
+  (no reinvestment), so the annualised return is the mean times 252. An undefined
+  metric is NaN, never 0. The Deflated Sharpe ratio uses the published closed form
+  for the expected best of N trials; against a simulation of the largest of 50
+  normal draws it gave 2.2763 where the simulation gave 2.2500, so it overstates
+  the hurdle slightly, on the conservative side. Trials that never traded count
+  towards N but not towards the variance of trial Sharpe ratios.
