@@ -3,7 +3,12 @@
 Phase tracker. Update this file in the same commit as the work it describes.
 Gates are defined in docs/PROJECT_BRIEF.md.
 
-## Current phase: 2. Real pairs (gate passed 2026-11-10; Phase 3 not started)
+## Current phase: 3. Backtester (in progress, started 2026-11-11)
+
+Phase 2 gate passed 2026-11-10. Phase 3 progress is tracked in docs/SPRINT.md,
+milestone B; notes on each piece are appended at the end of this file.
+
+## Phase 2 steps
 
 Gate: all estimates use only data before their as-of date.
 
@@ -354,3 +359,17 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   under 50 bars, while true half-life 32 gives a median of 19.37. KO/PEP half-life:
   Graziano (2026), arXiv 2609.35359, section 2.2, in-sample estimate, about 31.9
   trading days.
+- Hedge ratio variants (Phase 3): `rolling_ols_hedge` fits, for each row t, the
+  window of rows strictly before t. `stats/kalman.py` is a numpy Kalman filter
+  with state (alpha, beta) as a random walk; the state noise is either a fixed
+  covariance or a forgetting factor (recursive least squares with memory 1 / (1 -
+  lam)). It reproduces Bayesian linear regression and weighted least squares
+  exactly. On data simulated from its own model (seeds 8200 to 8399) the mean beta
+  RMSE was 0.0122 against 0.0301 for static OLS, and it was closer than OLS on
+  96.5 percent of seeds. The noise settings are not fitted by maximum likelihood:
+  the model treats the spread as white noise, so likelihood would explain the
+  spread's persistence as state noise and remove the signal. One first-version
+  bound in `tests/test_kalman.py` was wrong (2.7 standard errors, taken from a
+  200-seed range); seed 8300 failed it at 2.8 standard errors, the seed was kept
+  and the bound replaced by the theoretical 4 standard errors, as its docstring
+  records.

@@ -17,7 +17,13 @@ import pytest
 import statsmodels.api as sm
 
 from statarb_agent.data.synthetic import simulate_cointegrated_pair
-from statarb_agent.stats.hedge_ratio import HedgeRatio, ols_hedge_ratio, spread
+from statarb_agent.stats.hedge_ratio import (
+    HedgeRatio,
+    ols_hedge_ratio,
+    ols_residual_sd,
+    rolling_ols_hedge,
+    spread,
+)
 
 SEED = 7
 BETA = 1.5
@@ -129,3 +135,90 @@ def test_spread_mismatched_index_raises(pair: pd.DataFrame) -> None:
     truth = HedgeRatio(alpha=ALPHA, beta=BETA, nobs=0, last_obs=pair.index[0])
     with pytest.raises(ValueError):
         spread(pair["log_a"], pair["log_b"].iloc[1:], truth)
+
+
+# Rolling OLS -----------------------------------------------------------------
+
+
+def test_rolling_matches_static_fit_on_each_window() -> None:
+    """Known answer: each row equals ols_hedge_ratio on the window before it."""
+    df = simulate_cointegrated_pair(seed=7, n_obs=400)
+    a, b = df["log_a"], df["log_b"]
+    window = 120
+    rolling = rolling_ols_hedge(a, b, "2100-01-01", window=window)
+    assert len(rolling) == 400 - window
+    assert rolling.index[0] == df.index[window] and rolling.index[-1] == df.index[-1]
+    assert list(rolling.columns) == ["alpha", "beta", "resid_sd"]
+    for t in (window, window + 1, 250, 399):
+        date = df.index[t]
+        rows_a, rows_b = a.iloc[t - window : t], b.iloc[t - window : t]
+        static = ols_hedge_ratio(rows_a, rows_b, date)
+        assert static.nobs == window and static.last_obs == df.index[t - 1]
+        assert rolling.loc[date, "alpha"] == pytest.approx(static.alpha, rel=1e-9)
+        assert rolling.loc[date, "beta"] == pytest.approx(static.beta, rel=1e-9)
+        assert rolling.loc[date, "resid_sd"] == pytest.approx(
+            ols_residual_sd(rows_a, rows_b, static), rel=1e-9
+        )
+
+
+def test_rolling_exact_on_a_noiseless_line() -> None:
+    idx = pd.bdate_range("2015-01-01", periods=80, name="date")
+    b = pd.Series(np.linspace(1.0, 2.0, 80) ** 2, index=idx)
+    a = 0.25 + 1.75 * b
+    rolling = rolling_ols_hedge(a, b, "2100-01-01", window=30)
+    np.testing.assert_allclose(rolling["beta"], 1.75, rtol=1e-10)
+    np.testing.assert_allclose(rolling["alpha"], 0.25, atol=1e-10)
+    np.testing.assert_allclose(rolling["resid_sd"], 0.0, atol=1e-12)
+
+
+def test_rolling_row_t_ignores_row_t_and_later() -> None:
+    """Look-ahead test: changing rows from t on leaves the estimates up to t alone.
+
+    Row t's own fit uses rows before t only, so it must not change either.
+    """
+    df = simulate_cointegrated_pair(seed=7, n_obs=300)
+    window, cut = 60, 200
+    asof = df.index[280]
+    before = rolling_ols_hedge(df["log_a"], df["log_b"], asof, window=window)
+    changed = df.copy()
+    rng = np.random.default_rng(3)
+    changed.iloc[cut:, 0] = rng.standard_normal(300 - cut) * 10.0
+    changed.iloc[cut:, 1] = rng.standard_normal(300 - cut) * 10.0
+    after = rolling_ols_hedge(changed["log_a"], changed["log_b"], asof, window=window)
+    kept = before.index <= df.index[cut]  # includes row `cut` itself
+    pd.testing.assert_frame_equal(after.loc[kept], before.loc[kept], check_exact=True)
+    assert not after.loc[~kept].equals(before.loc[~kept])
+    # rows at or after asof are never read or returned
+    assert before.index.max() == df.index[279]
+    nan_tail = df.copy()
+    nan_tail.iloc[280:, :2] = np.nan
+    again = rolling_ols_hedge(nan_tail["log_a"], nan_tail["log_b"], asof, window=window)
+    pd.testing.assert_frame_equal(again, before, check_exact=True)
+
+
+def test_rolling_constant_window_gives_nan_not_an_error() -> None:
+    idx = pd.bdate_range("2015-01-01", periods=70, name="date")
+    b = pd.Series(np.r_[np.full(30, 2.0), np.linspace(2.0, 3.0, 40)], index=idx)
+    a = 1.0 + 0.5 * b
+    rolling = rolling_ols_hedge(a, b, "2100-01-01", window=20)
+    # linspace starts at 2.0, so rows 0 to 30 are all 2.0 and the fits dated up
+    # to row 31 see a constant log_b.
+    constant = rolling.index <= idx[31]
+    assert rolling.loc[constant].isna().all().all()
+    np.testing.assert_allclose(rolling.loc[~constant, "beta"], 0.5, rtol=1e-9)
+
+
+def test_rolling_argument_errors() -> None:
+    df = simulate_cointegrated_pair(seed=7, n_obs=100)
+    a, b = df["log_a"], df["log_b"]
+    with pytest.raises(ValueError, match="at least 20"):
+        rolling_ols_hedge(a, b, "2100-01-01", window=5)
+    with pytest.raises(TypeError):
+        rolling_ols_hedge(a, b, "2100-01-01", window=30.0)
+    with pytest.raises(ValueError, match="at least 101 rows"):
+        rolling_ols_hedge(a, b, "2100-01-01", window=100)
+    with pytest.raises(ValueError, match="different dates"):
+        rolling_ols_hedge(a, b.drop(b.index[3]), "2100-01-01", window=30)
+    hedge = ols_hedge_ratio(a, b, "2100-01-01")
+    with pytest.raises(ValueError, match="rows of the fit"):
+        ols_residual_sd(a.iloc[:50], b.iloc[:50], hedge)

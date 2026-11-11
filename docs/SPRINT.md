@@ -62,7 +62,7 @@ or scope. Ideas that would change the plan go under "Proposed changes" below.
 
 ## Milestone A. Finish Phase 2 (real pairs)
 
-Status: done 2026-11-10. Waiting at the hard gate after milestone A.
+Status: done 2026-11-10. Approved by the user on 2026-11-11.
 
 Work:
 - A1. Record the formation-length measurement; `configs/screen.yaml` with values
@@ -86,7 +86,24 @@ Acceptance:
 
 ## Milestone B. Backtester (Phase 3, with Kalman and Johansen)
 
-Status: not started.
+Status: in progress (started 2026-11-11).
+
+Additions from the user on 2026-11-11:
+- Before any backtest on real data, commit `configs/backtest.yaml` with every
+  parameter (entry, exit and stop z, the time stop in days, cost levels, borrow
+  fee, sizing) and its derivation from theory, synthetic data or placebo runs. No
+  value may be changed after seeing real backtest results; any later change is a
+  new trial, logged as one.
+- Backtest all demo pairs as case studies, plus the controls, whatever their
+  screen result. Report the screen status next to each result, and report screened
+  pairs separately as the strategy's headline result.
+- Every backtest run, including parameter sweeps and cost sensitivities, is
+  appended to the trial log, so the Deflated Sharpe ratio uses the real trial
+  count.
+- Do not rerun `analyse` or `demo` just to inspect results (each run adds a
+  trial). Read the stored artifacts and the trial log instead.
+- Keep auto-fetch with its notice; `data/raw` must be backed up outside git; the
+  trial log stays committed.
 
 Work:
 - B1. Hedge ratio variants: static OLS, rolling OLS, hand-written numpy Kalman
@@ -181,6 +198,10 @@ offline mock mode for tests. No call to the paid Claude API.
   the synthetic pair passes), README written, Phase 2 gate evidence in STATUS.
   Quality gate: 476 fast tests and 4 slow tests pass, ruff clean, scan clean.
   Milestone A complete. Next: milestone B, after the user's go-ahead.
+- 2026-11-11. Milestone A approved; milestone B started. B1 done: rolling OLS
+  (`rolling_ols_hedge`) and the hand-written Kalman filter (`stats/kalman.py`)
+  with exact closed-form tests, a time-varying beta recovery test and look-ahead
+  tests.
 
 ## Reviews
 
