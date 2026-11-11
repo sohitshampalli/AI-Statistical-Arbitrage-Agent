@@ -460,3 +460,11 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   2026-11-11 (`analyse --period validation`); the test period stays locked in the
   library. Basket screen, fixed before the basket was analysed: Johansen trace
   rank of at least 1 at 5 percent on the formation period.
+- Lock hardening (independent review finding, 2026-11-11):
+  `committed_clean_commit` used to trust `git status`, which `git update-index
+  --skip-worktree` or `--assume-unchanged` can blind. With HEAD holding the flag
+  as false, marking `configs/study.yaml` that way and editing it to true on disk
+  unlocked the test period. The check now also requires the file on disk to hash
+  to the same git blob as the copy in HEAD, and PREREGISTRATION.md must contain
+  text. No test-period data existed on disk and nothing was unlocked; this closes
+  a path that needed a deliberate git command.

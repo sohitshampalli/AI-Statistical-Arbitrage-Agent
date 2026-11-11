@@ -143,27 +143,53 @@ def committed_clean_commit(repo_root: Path, relpath: str) -> str | None:
     """Hash of the last commit that changed `relpath`, if it is committed and clean.
 
     `relpath` is relative to repo_root, with "/" separators. Returns None unless
-    the file exists, is in HEAD and has no staged or unstaged changes. Any git
-    failure (not a repository, git missing) also gives None.
+    all of these hold:
+    - the file exists, is not empty and is in HEAD;
+    - `git status` reports no staged or unstaged change for it;
+    - the file on disk hashes to the same git blob as the copy in HEAD.
+
+    The third check does not rely on git's index. `git status` can be told to
+    ignore a changed file (`git update-index --skip-worktree` or
+    `--assume-unchanged`), and with those flags an edit on disk would otherwise
+    pass as committed. Comparing the blob hashes reads the file itself.
+
+    Any git failure (not a repository, git missing) also gives None.
     """
     path = Path(repo_root) / relpath
-    if not path.is_file():
+    if not path.is_file() or path.stat().st_size == 0:
         return None
     try:
-        in_head = _git(repo_root, "cat-file", "-e", f"HEAD:{relpath}")
+        in_head = _git(repo_root, "rev-parse", "--verify", "--quiet", f"HEAD:{relpath}")
         status = _git(repo_root, "status", "--porcelain", "--", relpath)
+        on_disk = _git(repo_root, "hash-object", "--", relpath)
         last = _git(repo_root, "log", "-1", "--format=%H", "--", relpath)
     except OSError:
         return None
     if in_head.returncode != 0 or status.returncode != 0 or status.stdout.strip():
+        return None
+    committed_blob = in_head.stdout.strip()
+    if on_disk.returncode != 0 or not committed_blob:
+        return None
+    if on_disk.stdout.strip() != committed_blob:
         return None
     commit = last.stdout.strip()
     return commit if last.returncode == 0 and commit else None
 
 
 def preregistration_commit(repo_root: Path) -> str | None:
-    """Hash of the last commit that changed PREREGISTRATION.md, if committed and clean."""
-    return committed_clean_commit(repo_root, PREREGISTRATION_FILE)
+    """Hash of the last commit that changed PREREGISTRATION.md, if committed and clean.
+
+    The file must also hold some text: a file that is empty or only whitespace
+    is not a pre-registration.
+    """
+    commit = committed_clean_commit(repo_root, PREREGISTRATION_FILE)
+    if commit is None:
+        return None
+    try:
+        text = (Path(repo_root) / PREREGISTRATION_FILE).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    return commit if text.strip() else None
 
 
 def study_config_commit(repo_root: Path) -> str | None:
@@ -171,8 +197,9 @@ def study_config_commit(repo_root: Path) -> str | None:
 
     Returns None unless the file is committed and clean (as for
     PREREGISTRATION.md), is a valid study config, and sets
-    `test_period_unlocked: true`. Because the file has no changes, its contents
-    on disk are the committed contents.
+    `test_period_unlocked: true`. committed_clean_commit has checked that the
+    file on disk is byte for byte the copy in HEAD, so reading it from disk
+    reads the committed flag.
     """
     commit = committed_clean_commit(repo_root, STUDY_CONFIG.as_posix())
     if commit is None:

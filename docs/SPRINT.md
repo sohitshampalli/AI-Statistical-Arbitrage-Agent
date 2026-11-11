@@ -228,6 +228,10 @@ offline mock mode for tests. No call to the paid Claude API.
   (`backtest/runner.py`) and the CLI commands `backtest`, `backtest-demo`, `runs`,
   `summarise`. The validation period is open in the CLI. No real-data backtest has
   been run yet; the independent review comes first.
+- 2026-11-11. Independent review received (see Reviews). First fix: the
+  test-period lock now compares the file on disk with the blob in HEAD, so a git
+  index flag cannot hide an uncommitted unlock flag or an edited plan, and an
+  empty PREREGISTRATION.md does not count.
 
 ## Reviews
 

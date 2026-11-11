@@ -300,6 +300,58 @@ def test_locked_message_names_both_files(tmp_path: Path, repo: Path) -> None:
     assert "no uncommitted changes" in message
 
 
+# Git index flags and empty files (independent review, 2026-11-11) ---------
+
+
+@pytest.mark.parametrize("flag", ["--skip-worktree", "--assume-unchanged"])
+def test_flag_hidden_from_git_status_stays_locked(
+    tmp_path: Path, repo: Path, flag: str
+) -> None:
+    """git can be told to ignore a changed file; the lock must not be fooled.
+
+    HEAD holds the flag as false. The file is marked with a git index flag and
+    then edited to true on disk. `git status` reports nothing, so a check that
+    trusted it would unlock.
+    """
+    _commit_prereg(repo)
+    _commit_config(repo, False)
+    _git(repo, "update-index", flag, STUDY_CONFIG.as_posix())
+    _write_config(repo, True)
+    status = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"], capture_output=True,
+        text=True, check=True,
+    ).stdout
+    assert STUDY_CONFIG.as_posix() not in status  # git status really is blind here
+    assert study_config_commit(repo) is None
+    study = _study(tmp_path, True)
+    assert unlock_evidence(study, repo) is None
+    assert not is_test_period_unlocked(study, repo)
+    with pytest.raises(LockedPeriodError):
+        require_before_test_period("2023-06-01", study, repo)
+
+
+@pytest.mark.parametrize("flag", ["--skip-worktree", "--assume-unchanged"])
+def test_plan_edit_hidden_from_git_status_stays_locked(
+    tmp_path: Path, repo: Path, flag: str
+) -> None:
+    _unlock(repo)
+    assert is_test_period_unlocked(_study(tmp_path, True), repo)
+    _git(repo, "update-index", flag, PREREGISTRATION_FILE)
+    (repo / PREREGISTRATION_FILE).write_text("a different plan, written afterwards\n")
+    assert preregistration_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+@pytest.mark.parametrize("text", ["", "   \n\n"])
+def test_empty_preregistration_stays_locked(tmp_path: Path, repo: Path, text: str) -> None:
+    _commit_config(repo, True)
+    (repo / PREREGISTRATION_FILE).write_text(text)
+    _git(repo, "add", PREREGISTRATION_FILE)
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "empty plan")
+    assert preregistration_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
 # Guard: every form of asof ------------------------------------------------
 
 
