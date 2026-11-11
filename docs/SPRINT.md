@@ -204,6 +204,8 @@ offline mock mode for tests. No call to the paid Claude API.
   tests.
 - 2026-11-11. Johansen wrapper (`stats/johansen.py`) done, with `simulate_basket`
   and `simulate_random_walk_pair` in the simulator.
+- 2026-11-11. B2 signal rule done: `signals/zscore.py`, a pure state machine with
+  hand-worked tests and a prefix (look-ahead) test.
 
 ## Reviews
 

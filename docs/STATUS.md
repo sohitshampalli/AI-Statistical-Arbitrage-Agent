@@ -382,3 +382,10 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   252 rows. Weight error at 252 rows is large (mean 0.088, maximum 0.995, against
   0.0049 and 0.0184 at 2013 rows), so basket weights from a 252-day formation
   window are noisy.
+- Signal rule (`signals/zscore.py`): enter when |z| > entry, exit when the
+  distance on the entry side falls below exit (this includes crossing zero), stop
+  when it exceeds stop, time stop a fixed number of bars after the entry decision.
+  After a stop or a time stop new entries are blocked until |z| < exit once, so a
+  broken spread is not re-entered at once. The last signal bar of each trading
+  window forces flat and clears the block. No same-bar reversal. The decision at
+  bar t uses z up to t and is executed at the next bar by the engine.
