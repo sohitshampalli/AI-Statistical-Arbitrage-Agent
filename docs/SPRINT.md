@@ -235,4 +235,22 @@ None yet.
 
 ## Proposed changes
 
-None yet.
+These are proposals only. Nothing here is implemented; the current plan stands
+until the user decides.
+
+1. A per-window gate (proposed 2026-11-11). The screen in `configs/screen.yaml`
+   is applied once, to the full formation period, and a pair that fails it is
+   simply not part of the strategy. A walk-forward strategy could instead decide
+   window by window: trade the next 63 bars only if the 252-bar formation window
+   passes a cointegration test. That would be a different, more usual form of the
+   strategy (selection inside each formation window, as in the classic pairs
+   studies), and it would need its own derivation first: at 252 rows the
+   Engle-Granger test has far less power than at 2013, and the half-life cannot be
+   used at all (STATUS, half-life bias). It would be a new strategy variant, so
+   every run of it would be a new trial. Not implemented: it is not in the brief
+   or the sprint plan, and adding it after seeing real results would be choosing a
+   design with hindsight. If wanted, its thresholds must be fixed from simulation
+   before it touches a real pair.
+2. A placebo for the basket (proposed 2026-11-11). Placebos are run for pairs
+   only. `shuffle_dates` works on one leg, so a three-leg placebo is a small
+   addition; it was left out to keep the number of control runs down.
