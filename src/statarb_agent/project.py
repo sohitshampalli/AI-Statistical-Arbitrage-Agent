@@ -19,7 +19,7 @@ from statarb_agent.sources.tickers import normalise_ticker
 from statarb_agent.study import STUDY_CONFIG, to_date
 from statarb_agent.trials import LABELS, TRIALS_PATH
 
-CONFIG_NAMES: Final = ("study", "screen", "data", "pairs")
+CONFIG_NAMES: Final = ("study", "screen", "data", "pairs", "backtest")
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,15 @@ class Project:
         return self.configs / "pairs.yaml"
 
     @property
+    def backtest_path(self) -> Path:
+        return self.configs / "backtest.yaml"
+
+    @property
+    def runs_dir(self) -> Path:
+        """Run artifacts: one folder per backtest run or control batch."""
+        return self.reports_dir / "runs"
+
+    @property
     def data_dir(self) -> Path:
         return self.root / "data"
 
@@ -66,6 +75,7 @@ class Project:
             "screen": self.screen_path,
             "data": self.data_config_path,
             "pairs": self.pairs_path,
+            "backtest": self.backtest_path,
         }
         return paths[name]
 

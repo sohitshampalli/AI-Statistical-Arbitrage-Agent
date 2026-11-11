@@ -11,12 +11,24 @@ This module builds the control data and runs batches of backtests over fixed
 seeds. It computes no statistic of its own beyond summarising the per-seed
 metrics that backtest.summary produced.
 
-Shuffled-date placebo. For one leg, the day-to-day moves (price return and
-distribution yield together) are put in a random order and the price path is
-rebuilt from the first close. Every daily move of that leg still occurs
+Shuffled-date placebo. For each leg separately, the day-to-day moves (price
+return and distribution yield together) are put in a random order and the price
+path is rebuilt from the first close. Every daily move of a leg still occurs
 exactly once, so its return distribution and its total return over the period
 are unchanged, but the dates no longer line up with the other leg, so any
 relation between the two legs is destroyed.
+
+Both legs are shuffled, not one. Measured on simulated pairs (2026-11-11): with
+one leg left in place, every placebo of a pair shares that leg's path, and the
+batch mean depends on that one path. Across six base pairs the mean gross
+return of 100 one-leg placebos ranged from -2.87 to +2.65 percent a year, far
+from zero in both directions. Shuffling both legs of one base pair gave -0.17
+percent a year (t = -0.9 over 200 placebos).
+
+A placebo batch is a permutation test: if the two legs were unrelated, the real
+ordering of dates would be one more shuffle, so the share of placebos that do
+at least as well as the real pair is a p-value for "this pair's result needs
+the dates to line up".
 """
 
 from __future__ import annotations
@@ -29,7 +41,11 @@ import numpy as np
 import pandas as pd
 
 from statarb_agent.backtest.config import BacktestConfig
-from statarb_agent.backtest.engine import BacktestResult, run_pair_backtest
+from statarb_agent.backtest.engine import (
+    BacktestResult,
+    run_basket_backtest,
+    run_pair_backtest,
+)
 from statarb_agent.backtest.summary import span_metrics
 from statarb_agent.data.synthetic import (
     as_price_frame,
@@ -44,12 +60,15 @@ BATCH_COLUMNS = (
 )
 
 
-def shuffle_dates(frame: pd.DataFrame, seed: int) -> pd.DataFrame:
+def shuffle_dates(
+    frame: pd.DataFrame, seed: int | np.random.SeedSequence
+) -> pd.DataFrame:
     """Return a copy of a price frame with its daily moves in random order.
 
     Args:
         frame: Price frame with close, dividends, capital_gains and tr_close.
-        seed: Seed of numpy.random.default_rng for the permutation.
+        seed: Seed (or SeedSequence) for numpy.random.default_rng, which draws
+            the permutation.
 
     Returns:
         A frame on the same dates. The first row is kept. For rows 1 onward the
@@ -78,6 +97,46 @@ def shuffle_dates(frame: pd.DataFrame, seed: int) -> pd.DataFrame:
         out["close"], out["dividends"], out["capital_gains"]
     ).to_numpy()
     return out
+
+
+def shuffle_pair(
+    a: pd.DataFrame, b: pd.DataFrame, seed: int
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Shuffled-date placebo of a pair: both legs shuffled, independently.
+
+    The two permutations come from one numpy.random.SeedSequence(seed), which
+    is split into two child seeds, so the legs never share a permutation.
+    """
+    first, second = np.random.SeedSequence(seed).spawn(2)
+    return shuffle_dates(a, first), shuffle_dates(b, second)
+
+
+def placebo_rank(real: float, placebo: np.ndarray) -> dict[str, float]:
+    """Where a real result stands among its placebos.
+
+    Args:
+        real: The real pair's metric (for example its net Sharpe ratio).
+        placebo: The same metric for each placebo. NaN entries (a placebo
+            that never traded) are left out.
+
+    Returns:
+        n_placebos (those with a defined metric), placebo_mean, and
+        share_at_least, the share of placebos with a metric at least as large
+        as the real one, counting the real result as one of the draws:
+        (1 + number at least as large) / (1 + n). Both are NaN if the real
+        metric is NaN or there is no placebo.
+    """
+    values = np.asarray(placebo, dtype=float)
+    values = values[np.isfinite(values)]
+    n = len(values)
+    if n == 0 or not math.isfinite(real):
+        return {"n_placebos": float(n), "placebo_mean": math.nan,
+                "share_at_least": math.nan}
+    return {
+        "n_placebos": float(n),
+        "placebo_mean": float(values.mean()),
+        "share_at_least": float((1 + (values >= real).sum()) / (1 + n)),
+    }
 
 
 def simulated_pair_frames(
@@ -123,7 +182,9 @@ def _row(seed: int, result: BacktestResult) -> dict[str, Any]:
 
 
 def run_batch(
-    make_frames: Callable[[int], tuple[pd.DataFrame, pd.DataFrame]],
+    make_frames: Callable[
+        [int], tuple[pd.DataFrame, pd.DataFrame] | dict[str, pd.DataFrame]
+    ],
     seeds: range,
     *,
     asof: pd.Timestamp | str,
@@ -131,12 +192,14 @@ def run_batch(
     hedge: str | None = None,
     cost_bps: float | None = None,
 ) -> pd.DataFrame:
-    """Backtest one pair per seed and collect the full-span metrics.
+    """Backtest one pair or basket per seed and collect the full-span metrics.
 
     Args:
-        make_frames: Returns the two legs' price frames for a seed.
+        make_frames: Returns, for a seed, either the two legs' price frames (a
+            pair) or a dict of three or more frames (a Johansen basket).
         seeds: Seeds to run.
-        asof, config, hedge, cost_bps: As for run_pair_backtest.
+        asof, config, hedge, cost_bps: As for run_pair_backtest. `hedge` is
+            ignored for a basket.
 
     Returns:
         One row per seed with the columns in BATCH_COLUMNS. Returns are over
@@ -144,10 +207,16 @@ def run_batch(
     """
     rows = []
     for seed in seeds:
-        a, b = make_frames(seed)
-        result = run_pair_backtest(
-            a, b, asof=asof, config=config, hedge=hedge, cost_bps=cost_bps
-        )
+        frames = make_frames(seed)
+        if isinstance(frames, dict):
+            result = run_basket_backtest(
+                frames, asof=asof, config=config, cost_bps=cost_bps
+            )
+        else:
+            a, b = frames
+            result = run_pair_backtest(
+                a, b, asof=asof, config=config, hedge=hedge, cost_bps=cost_bps
+            )
         rows.append(_row(seed, result))
     return pd.DataFrame(rows, columns=list(BATCH_COLUMNS))
 

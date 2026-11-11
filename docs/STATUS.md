@@ -425,3 +425,19 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   (price return and distribution yield together) and rebuilds the path, so the leg
   keeps its return distribution and total return but loses its alignment with the
   other leg.
+- Backtest settings (`configs/backtest.yaml`, committed 2026-11-11 before any real
+  backtest; the file holds each derivation): entry 2, exit 0.5, stop 4 (brief);
+  time stop 30 bars, three half-lives of the design half-life 10 (on a true AR(1)
+  z-score 88.0 percent of trades end by themselves within 30 bars at half-life 10,
+  60.4 percent at 20, 36.9 percent at 32); 10 basis points per leg with
+  sensitivity at 0, 10, 20 (brief); borrow fee 50 basis points a year, an
+  assumption; capital sized once, gross exposure 1, dollar neutral; Kalman memory
+  252 bars. Decision on the open item about the half-life bias: the time stop is a
+  fixed number of bars and the half-life is a diagnostic only. Calibration on
+  seeds 20000 to 20199 at 10 basis points: cointegrated pairs mean net Sharpe
+  1.38, 0.83, 0.38, 0.16 at half-life 5, 10, 20, 32 (static); random walks gross t
+  -0.5, -0.3, +0.7. Placebo design: shuffling one leg leaves the other leg's path
+  fixed, and the batch mean then depends on that path (six base pairs gave -2.87
+  to +2.65 percent a year), so both legs are shuffled (t -0.9 for one base pair,
+  +0.7 over independent pairs). A placebo batch is read as a permutation test: the
+  share of placebos doing at least as well as the real pair.

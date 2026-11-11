@@ -1,0 +1,155 @@
+# Backtest settings. Committed on 2026-11-11, before any backtest on real data.
+#
+# Rule: no value here may be changed after a real-data backtest has been seen.
+# A run with different values is a new trial; every run stores the values it
+# used and the hash of this file in the trial log.
+#
+# Every value below comes from the project brief, from a stated assumption, or
+# from simulated data. No real pair was looked at to choose any of them. The
+# simulations are in scripts/measure_backtest_controls.py (calibration seeds
+# 20000 to 20199, 200 simulated pairs per row, 3130 rows each, which is 11.4
+# years of trading after the first formation window).
+#
+# What the simulations can and cannot show: they show that the rule finds the
+# edge that was built into the simulated data, and none where none was built in.
+# They say nothing about whether real pairs have an edge.
+
+walk_forward:
+  # Project brief: fit on 252 trading days (one year), trade the next 63 (one
+  # quarter), then roll forward by 63. Parameters are re-estimated for every
+  # window from rows before it and never changed inside it (the rolling and
+  # Kalman hedge variants update the hedge ratio daily from past rows, by
+  # design).
+  formation_days: 252
+  trading_days: 63
+
+signal:
+  # Project brief, section 6 of the maths: enter when |z| > 2, exit when
+  # |z| < 0.5, stop when |z| > 4. z is the spread over its standard deviation,
+  # both estimated from rows before the bar. Orders fill at the next close.
+  entry_z: 2.0
+  exit_z: 0.5
+  stop_z: 4.0
+  # Time stop in bars. The brief says "about 3 half-lives". The half-life cannot
+  # be estimated well from 252 rows (docs/STATUS.md: the estimate is biased down
+  # by a third or more), so a fixed number is used and the half-life is reported
+  # as a diagnostic only. 30 = 3 x 10: three half-lives of the design half-life
+  # of 10 bars that the simulated pair has had since Phase 1. It is a design
+  # value, not an estimate.
+  #
+  # Trade length with NO time stop, on a true AR(1) z-score (bars from the entry
+  # decision to the exit decision):
+  #   half-life   median   p75   p90   p95   ended within 30 bars
+  #       5          8      12    18    22         98.8%
+  #      10         14      22    32    41         88.0%
+  #      20         26      40    62    76         60.4%
+  #      32         39      63    94   119         36.9%
+  # So at the design half-life most trades finish before the stop; slower
+  # spreads are cut short more often, which is the stop's purpose.
+  time_stop_days: 30
+
+hedge:
+  # static: one OLS fit per formation window (the baseline in the brief).
+  # rolling: OLS on the 252 rows before each bar.
+  # kalman: hand-written filter with a random-walk (alpha, beta), started from
+  #   the formation OLS fit, observation noise equal to the formation residual
+  #   variance.
+  # All three are run and logged; static is the default and the pre-stated
+  # baseline. They are variants to compare, not a menu to pick the best from.
+  default: static
+  variants: [static, rolling, kalman]
+  # Forgetting factor of the Kalman variant, written as its effective memory in
+  # bars: lam = 1 - 1 / 252. It equals the formation window, so the rolling and
+  # the Kalman variant look back equally far. Not fitted by likelihood: the
+  # filter treats the spread as white noise, so likelihood would explain the
+  # spread's persistence as a moving intercept and remove the signal.
+  kalman_memory_days: 252
+
+sizing:
+  # Capital is a unit of account; every result is reported as a fraction of it.
+  # Profits are not reinvested: each entry is sized on this initial capital.
+  capital: 1000000
+  # Each entry puts 1.0 x capital to work in total: half long, half short. No
+  # leverage. One pair uses the whole capital while it has a position.
+  gross_exposure: 1.0
+  # dollar: equal value long and short, the plain textbook form. "beta" (values
+  # in proportion 1 : beta) is implemented and tested but is not the default.
+  neutrality: dollar
+
+costs:
+  # Project brief: spread and slippage of 5 to 10 basis points per leg per
+  # trade, with sensitivity at 0, 10 and 20. The default is the upper end, 10.
+  # Charged on the traded value of every leg at every entry and exit.
+  cost_bps_per_leg: 10
+  sensitivity_bps: [0, 10, 20]
+  # Annual fee on the value of the short leg, charged per calendar day held over
+  # a 360-day year. 50 basis points is an ASSUMPTION for easy-to-borrow large
+  # caps and broad ETFs, not a measurement; names that are hard to borrow cost
+  # far more. Cash and short-sale proceeds earn no interest in this model.
+  # Dividends on the short leg are owed in full and booked separately.
+  borrow_fee_bps_annual: 50
+  borrow_day_count: 360
+
+basket:
+  # Johansen test settings for the three-asset basket: a constant term and one
+  # lagged difference, the usual minimal choice. The basket trades the first
+  # eigenvector, scaled to absolute sum 1, as its dollar weights.
+  # Measured (tests/test_johansen.py): at 252 rows the test finds a true
+  # relation with half-life 10 only about a quarter of the time and the
+  # weights are noisy, so basket results from 252-day windows are weak evidence.
+  det_order: 0
+  k_ar_diff: 1
+
+controls:
+  # Simulated controls, run through exactly the same code as real pairs. All
+  # seeds were fixed on 2026-11-11 before the first control run and are not to
+  # be changed.
+  # One simulated cointegrated pair and one pair of independent random walks,
+  # shown next to the real pairs:
+  synthetic_seed: 20261111
+  random_walk_seed: 20261112
+  # 3130 business days from 2010-01-01 end on 2021-12-30, the span of the real
+  # data, so the controls have a formation and a validation period too.
+  n_obs: 3130
+  # Simulator parameters, the same as the Phase 1 defaults: true hedge ratio
+  # 1.5, intercept 0.3, spread half-life 10 bars and standard deviation 0.02,
+  # daily standard deviation 0.015 for every random-walk increment.
+  half_life: 10.0
+  beta: 1.5
+  alpha: 0.3
+  spread_sd: 0.02
+  sigma: 0.015
+  # Control batches: 200 cointegrated pairs and 200 random-walk pairs, seeds
+  # 30000 to 30199.
+  batch_first_seed: 30000
+  batch_size: 200
+  # Shuffled-date placebos of each real pair: 200 per pair, seeds 40000 to
+  # 40199. Both legs are shuffled (see backtest/controls.py for why).
+  placebo_first_seed: 40000
+  placebo_shuffles: 200
+
+# Simulation results with the settings above (10 basis points per leg unless
+# stated; "positive" is the share of the 200 seeds with a positive net return).
+#
+# Cointegrated pairs, mean annualised net Sharpe ratio by true half-life:
+#   half-life   static   rolling   kalman   net return per year (static)   positive (static)
+#       5        1.38     1.38      1.39            6.21%                      100.0%
+#      10        0.83     0.85      0.86            3.28%                      100.0%
+#      20        0.38     0.39      0.38            1.36%                       91.5%
+#      32        0.16     0.18      0.18            0.56%                       75.0%
+#   Half-life 10, static, at 0 / 10 / 20 basis points: Sharpe 1.04 / 0.83 / 0.62.
+#   The edge falls quickly as the spread gets slower; at half-life 32 a quarter
+#   of truly cointegrated pairs lose money after costs.
+#
+# Pairs of independent random walks (no edge exists):
+#   variant   gross return per year   t of the mean   net return per year   Sharpe > 1
+#   static          -0.06%               -0.5              -0.40%               0.0%
+#   rolling         -0.04%               -0.3              -0.40%               0.0%
+#   kalman          +0.08%               +0.7              -0.25%               0.0%
+#
+# Shuffled-date placebos of one simulated cointegrated pair (seed 20000), both
+# legs shuffled, static: gross -0.07% per year (t -0.4), net -0.46% per year.
+#
+# Three-asset baskets (Johansen weights):
+#   cointegrated, half-life 10: Sharpe 0.74 at 0 bps, 0.47 at 10 bps, 96.0% positive
+#   independent: gross +0.23% per year (t +1.3), net -0.59% per year

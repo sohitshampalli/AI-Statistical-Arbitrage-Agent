@@ -217,6 +217,13 @@ offline mock mode for tests. No call to the paid Claude API.
 - 2026-11-11. Span metrics (`backtest/summary.py`) and controls
   (`backtest/controls.py`: shuffled-date placebo, simulated control pairs, seed
   batches) done.
+- 2026-11-11. `configs/backtest.yaml` committed with every value and its
+  derivation, before any real-data backtest. B6 gate tests
+  (`tests/test_backtest_gate.py`, slow) pass on seeds 21000 to 21199: cointegrated
+  pairs mean net Sharpe 0.86, 0.86, 0.85 (static, rolling, kalman) with at least
+  99.5 percent of seeds positive; random walks -0.04, -0.05, -0.05 with gross t
+  +0.9, +1.0, +0.5; shuffled placebos -0.05 with gross t +0.1; cointegrated
+  baskets 0.53; independent baskets -0.09 with gross t +0.4.
 
 ## Reviews
 

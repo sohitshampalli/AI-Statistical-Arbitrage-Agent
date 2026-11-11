@@ -10,8 +10,10 @@ import pytest
 
 from statarb_agent.backtest.controls import (
     BATCH_COLUMNS,
+    placebo_rank,
     run_batch,
     shuffle_dates,
+    shuffle_pair,
     simulated_pair_frames,
     summarise_batch,
 )
@@ -141,3 +143,29 @@ def test_summarise_batch_by_hand() -> None:
     assert out["mean_trades"] == 5.0
     with pytest.raises(ValueError):
         summarise_batch(batch.iloc[:1])
+
+
+def test_shuffle_pair_shuffles_both_legs_differently() -> None:
+    a, b = paying_frame(seed=1), paying_frame(seed=2)
+    sa, sb = shuffle_pair(a, b, seed=5)
+    assert not sa["close"].equals(a["close"]) and not sb["close"].equals(b["close"])
+    for original, shuffled in ((a, sa), (b, sb)):
+        assert shuffled["close"].iloc[-1] == pytest.approx(original["close"].iloc[-1])
+    # the two legs do not share one permutation: shuffling a frame against
+    # itself gives two different paths
+    twin_a, twin_b = shuffle_pair(a, a, seed=5)
+    assert not twin_a["close"].equals(twin_b["close"])
+    again_a, again_b = shuffle_pair(a, b, seed=5)
+    pd.testing.assert_frame_equal(again_a, sa)
+    pd.testing.assert_frame_equal(again_b, sb)
+    assert not shuffle_pair(a, b, seed=6)[0]["close"].equals(sa["close"])
+
+
+def test_placebo_rank_by_hand() -> None:
+    out = placebo_rank(1.0, np.array([0.5, 1.0, 1.5, -0.2, math.nan]))
+    # four defined placebos; two are at least 1.0; (1 + 2) / (1 + 4)
+    assert out == {"n_placebos": 4.0, "placebo_mean": pytest.approx(0.7),
+                   "share_at_least": pytest.approx(0.6)}
+    assert placebo_rank(9.0, np.array([0.1, 0.2]))["share_at_least"] == pytest.approx(1 / 3)
+    assert math.isnan(placebo_rank(math.nan, np.array([0.1]))["share_at_least"])
+    assert math.isnan(placebo_rank(1.0, np.array([math.nan]))["share_at_least"])

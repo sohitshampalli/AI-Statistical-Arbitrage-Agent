@@ -130,7 +130,9 @@ def test_project_configs_load() -> None:
     assert pairs.label_for("XOM", "V") == "control"
     assert pairs.label_for("KO", "XOM") == "exploratory"
     assert pairs.tickers() == (*DEMO_TICKERS, "KDP")
-    assert sorted(project.config_hashes()) == ["data", "pairs", "screen", "study"]
+    assert sorted(project.config_hashes()) == [
+        "backtest", "data", "pairs", "screen", "study",
+    ]
 
 
 @pytest.mark.parametrize(
