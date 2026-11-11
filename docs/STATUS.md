@@ -417,3 +417,11 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   profit is booked on close plus distributions. Look-ahead tests: prefix
   invariance at several cut rows for each variant and the basket, and perturbing
   all rows from asof on.
+- Span metrics (`backtest/summary.py`): a backtest runs once over formation plus
+  validation; metrics are reported for the whole run, for the formation period
+  (from the first signal bar) and for the validation period, from the ledger rows
+  dated in each span and the trades that closed in it. Controls
+  (`backtest/controls.py`): a shuffled-date placebo permutes one leg's daily moves
+  (price return and distribution yield together) and rebuilds the path, so the leg
+  keeps its return distribution and total return but loses its alignment with the
+  other leg.

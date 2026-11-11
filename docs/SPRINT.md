@@ -214,6 +214,9 @@ offline mock mode for tests. No call to the paid Claude API.
   rolling and Kalman hedge; Johansen basket) and `backtest/config.py`. Prefix
   invariance holds exactly for every variant: a backtest on the first k rows
   equals the first k rows of the full backtest.
+- 2026-11-11. Span metrics (`backtest/summary.py`) and controls
+  (`backtest/controls.py`: shuffled-date placebo, simulated control pairs, seed
+  batches) done.
 
 ## Reviews
 

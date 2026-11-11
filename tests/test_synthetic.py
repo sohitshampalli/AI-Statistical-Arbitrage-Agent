@@ -173,3 +173,15 @@ def test_random_walk_pair_is_what_the_docstring_says() -> None:
     for bad in ({"seed": -1}, {"seed": 1, "n_obs": 2}, {"seed": 1, "sigma": 0.0}):
         with pytest.raises(ValueError):
             simulate_random_walk_pair(**bad)
+
+
+def test_as_price_frame() -> None:
+    from statarb_agent.data.synthetic import as_price_frame
+
+    idx = pd.bdate_range("2020-01-01", periods=3, name="date")
+    frame = as_price_frame(pd.Series([0.0, math.log(2.0), math.log(4.0)], index=idx))
+    assert list(frame.columns) == ["close", "dividends", "capital_gains", "tr_close"]
+    np.testing.assert_allclose(frame["close"], [1.0, 2.0, 4.0])
+    np.testing.assert_allclose(frame["tr_close"], frame["close"])
+    assert (frame[["dividends", "capital_gains"]] == 0.0).all().all()
+    assert frame.index.equals(idx)
