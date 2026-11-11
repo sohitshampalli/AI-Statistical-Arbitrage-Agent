@@ -396,3 +396,11 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   normal draws it gave 2.2763 where the simulation gave 2.2500, so it overstates
   the hurdle slightly, on the conservative side. Trials that never traded count
   towards N but not towards the variance of trial Sharpe ratios.
+- Accounting (`backtest/accounting.py`): the decision of bar t executes at the
+  close of bar t + 1. Each bar books price profit, distributions (received on
+  longs, owed on shorts, from the price source's dividend and capital-gain
+  columns), a borrow fee on the short value by calendar days over 360, and trading
+  cost in basis points of each leg's traded value. Entries are sized on the
+  initial capital times the gross exposure; shares are fixed from entry to exit;
+  cash earns nothing. A position still open at the last bar is marked to market
+  and flagged open, not force-closed, so every row depends only on earlier rows.

@@ -208,6 +208,8 @@ offline mock mode for tests. No call to the paid Claude API.
   hand-worked tests and a prefix (look-ahead) test.
 - 2026-11-11. B5 metrics done: `backtest/metrics.py` with hand-computed tests,
   including Probabilistic and Deflated Sharpe.
+- 2026-11-11. B4 accounting done: `backtest/accounting.py`, a daily ledger with a
+  hand-booked test, the equity identity and a prefix (look-ahead) test.
 
 ## Reviews
 
