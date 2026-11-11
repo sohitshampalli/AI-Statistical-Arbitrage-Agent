@@ -224,6 +224,10 @@ offline mock mode for tests. No call to the paid Claude API.
   99.5 percent of seeds positive; random walks -0.04, -0.05, -0.05 with gross t
   +0.9, +1.0, +0.5; shuffled placebos -0.05 with gross t +0.1; cointegrated
   baskets 0.53; independent baskets -0.09 with gross t +0.4.
+- 2026-11-11. B8 and B9 done: run artifacts (`backtest/runs.py`), the runner
+  (`backtest/runner.py`) and the CLI commands `backtest`, `backtest-demo`, `runs`,
+  `summarise`. The validation period is open in the CLI. No real-data backtest has
+  been run yet; the independent review comes first.
 
 ## Reviews
 

@@ -441,3 +441,22 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   to +2.65 percent a year), so both legs are shuffled (t -0.9 for one base pair,
   +0.7 over independent pairs). A placebo batch is read as a permutation test: the
   share of placebos doing at least as well as the real pair.
+- Run artifacts (`backtest/runs.py`): each run is written once to
+  `reports/runs/<run_id>/` as `run.json` plus Parquet tables (daily ledger,
+  trades, signals, windows, prices), each table hash-checked on read; the folder
+  is gitignored because it derives from downloaded prices. The run id is the trial
+  id. Runner (`backtest/runner.py`): loads through `Analyser.load_checked` (the
+  same checked data path as `analyse`), runs the engine on formation plus
+  validation with asof 2022-01-01, logs one trial per run (each hedge variant and
+  cost level is its own trial), then computes the Deflated Sharpe ratio per span
+  against every counted trial so far. Counted trials: real-data backtests with
+  outcome ok, excluding placebo and simulated batches. The screen status shown
+  with a result is read from the latest formation-period analysis in the trial
+  log; a backtest never re-runs an analysis. `statarb backtest-demo` refuses to
+  run a second time for the same `configs/backtest.yaml` unless `--again` is
+  given. `statarb summarise` writes a summary artifact (not a trial) with every
+  row deflated at the current trial count and a headline for the screened pairs at
+  the default hedge and cost. The validation period was opened in the CLI on
+  2026-11-11 (`analyse --period validation`); the test period stays locked in the
+  library. Basket screen, fixed before the basket was analysed: Johansen trace
+  rank of at least 1 at 5 percent on the formation period.

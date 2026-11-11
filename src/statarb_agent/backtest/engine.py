@@ -303,6 +303,39 @@ def basket_signal_frame(
     return signals, pd.DataFrame.from_records(records)
 
 
+def run_settings(
+    config: BacktestConfig, kind: str, hedge: str, cost_bps: float | None = None
+) -> dict[str, Any]:
+    """The values a run uses, as a flat dict for the trial log and the artifact.
+
+    Args:
+        config: Backtest settings.
+        kind: "pair" or "basket".
+        hedge: "static", "rolling", "kalman" or "johansen".
+        cost_bps: Trading cost per leg; default config.cost_bps_per_leg.
+    """
+    costs = config.cost_model(cost_bps)
+    return {
+        "kind": kind,
+        "hedge": hedge,
+        "formation_days": config.formation_days,
+        "trading_days": config.trading_days,
+        "entry_z": config.signal.entry_z,
+        "exit_z": config.signal.exit_z,
+        "stop_z": config.signal.stop_z,
+        "time_stop_days": config.signal.time_stop_bars,
+        "capital": config.capital,
+        "gross_exposure": config.gross_exposure,
+        "neutrality": config.neutrality if kind == "pair" else "eigenvector",
+        "cost_bps_per_leg": costs.cost_bps_per_leg,
+        "borrow_fee_bps_annual": costs.borrow_fee_bps_annual,
+        "borrow_day_count": costs.borrow_day_count,
+        "kalman_memory_days": config.kalman_memory_days if hedge == "kalman" else None,
+        "basket_det_order": config.basket_det_order if kind == "basket" else None,
+        "basket_k_ar_diff": config.basket_k_ar_diff if kind == "basket" else None,
+    }
+
+
 def _prepare(
     frames: dict[str, pd.DataFrame], asof: pd.Timestamp | str, config: BacktestConfig
 ) -> dict[str, pd.DataFrame]:
@@ -362,25 +395,7 @@ def _finish(
     )
     signals = signals.assign(decision=decisions.target, reason=decisions.reason)
     daily = ledger.daily.assign(window=signals["window"].to_numpy())
-    settings = {
-        "kind": kind,
-        "hedge": hedge,
-        "formation_days": config.formation_days,
-        "trading_days": config.trading_days,
-        "entry_z": config.signal.entry_z,
-        "exit_z": config.signal.exit_z,
-        "stop_z": config.signal.stop_z,
-        "time_stop_days": config.signal.time_stop_bars,
-        "capital": config.capital,
-        "gross_exposure": config.gross_exposure,
-        "neutrality": config.neutrality if kind == "pair" else "eigenvector",
-        "cost_bps_per_leg": costs.cost_bps_per_leg,
-        "borrow_fee_bps_annual": costs.borrow_fee_bps_annual,
-        "borrow_day_count": costs.borrow_day_count,
-        "kalman_memory_days": config.kalman_memory_days if hedge == "kalman" else None,
-        "basket_det_order": config.basket_det_order if kind == "basket" else None,
-        "basket_k_ar_diff": config.basket_k_ar_diff if kind == "basket" else None,
-    }
+    settings = run_settings(config, kind, hedge, cost_bps)
     return BacktestResult(
         kind=kind,
         labels=labels,

@@ -9,89 +9,35 @@ folder or the real trial log.
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
+from fake_market import (
+    ASOF,
+    CALENDAR,
+    DEMO_TICKERS,
+    N_FORMATION,
+    REPO_ROOT,
+    FakeDownloader,
+    base_frames,
+    make_project,
+)
 from typer.testing import CliRunner
 
 from statarb_agent import cli
 from statarb_agent.analysis import Analyser, OfflineError
-from statarb_agent.data.synthetic import simulate_cointegrated_pair
 from statarb_agent.project import Project, load_data_config, load_pairs
 from statarb_agent.sources.base import SnapshotStore
 from statarb_agent.sources.prices import YFinancePrices
 from statarb_agent.study import LockedPeriodError, load_study
 from statarb_agent.trials import TrialLog
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-CALENDAR = pd.bdate_range("2010-01-04", "2021-12-31", tz="America/New_York", name="Date")
-ASOF = pd.Timestamp("2018-01-01")  # formation as-of; a Monday, so a row has this date
-N_FORMATION = int((CALENDAR.tz_localize(None) < ASOF).sum())
-DEMO_TICKERS = ("V", "MA", "KO", "PEP", "XOM", "CVX", "HD", "LOW", "EWA", "EWC")
-
-
-def frame_from_close(close: np.ndarray, dividends: np.ndarray | None = None) -> pd.DataFrame:
-    """A frame shaped like Ticker.history(auto_adjust=False, actions=True)."""
-    n = len(close)
-    div = np.zeros(n) if dividends is None else dividends
-    return pd.DataFrame(
-        {
-            "Open": close, "High": close * 1.01, "Low": close * 0.99, "Close": close,
-            "Adj Close": close, "Volume": np.full(n, 1000, dtype="int64"),
-            "Dividends": div, "Stock Splits": np.zeros(n),
-        },
-        index=CALENDAR[:n] if n <= len(CALENDAR) else None,
-    )
-
-
-def walk(seed: int, start: float = 80.0) -> np.ndarray:
-    rng = np.random.default_rng(seed)
-    return start * np.exp(np.cumsum(0.01 * rng.standard_normal(len(CALENDAR))))
-
-
-def base_frames() -> dict[str, pd.DataFrame]:
-    """AAA and BBB are cointegrated (beta 1.5, half-life 10); the rest are walks."""
-    pair = simulate_cointegrated_pair(seed=11, n_obs=len(CALENDAR))
-    dividends = np.zeros(len(CALENDAR))
-    dividends[40::63] = 0.25
-    frames = {
-        "AAA": frame_from_close(np.exp(pair["log_a"].to_numpy()), dividends),
-        "BBB": frame_from_close(np.exp(pair["log_b"].to_numpy())),
-        "SPY": frame_from_close(walk(1, 200.0)),
-    }
-    for i, ticker in enumerate(DEMO_TICKERS):
-        frames[ticker] = frame_from_close(walk(100 + i))
-    gap = frame_from_close(walk(3))
-    frames["GAP"] = gap.drop(gap.index[[300, 301, 950]])
-    late = frame_from_close(walk(4))
-    frames["LATE"] = late.loc[late.index >= "2012-06-01"]
-    big = np.zeros(len(CALENDAR))
-    big[500] = 0.3 * walk(5)[499]
-    frames["BIGDIV"] = frame_from_close(walk(5), big)
-    frames["NODATA"] = frame_from_close(walk(6)).iloc[:0]
-    return frames
-
-
-class FakeDownloader:
-    def __init__(self, frames: dict[str, pd.DataFrame]) -> None:
-        self.frames = frames
-        self.calls: list[tuple[str, str, str]] = []
-
-    def __call__(self, ticker: str, start: str, end: str) -> pd.DataFrame:
-        self.calls.append((ticker, start, end))
-        return self.frames[ticker].copy()
-
 
 @pytest.fixture
 def project(tmp_path: Path) -> Project:
-    root = tmp_path / "project"
-    shutil.copytree(REPO_ROOT / "configs", root / "configs")
-    path = root / "configs" / "data.yaml"
-    path.write_text(path.read_text().replace("pause_seconds: 2.0", "pause_seconds: 0.0"))
-    return Project(root)
+    return make_project(tmp_path)
 
 
 @pytest.fixture
@@ -334,10 +280,11 @@ def test_cli_analyse_text_output(cli_env: Project) -> None:
 
 
 def test_cli_refusals(cli_env: Project) -> None:
-    result = run(cli_env, "analyse", "AAA", "BBB", "--period", "validation")
-    assert result.exit_code == 1 and "not open" in result.output
+    # The validation period was opened in the CLI on 2026-11-11 (backtester
+    # phase); tests/test_runner.py covers it. The test period stays refused.
     result = run(cli_env, "analyse", "AAA", "BBB", "--period", "test")
-    assert result.exit_code == 1
+    assert result.exit_code == 1 and "not open" in result.output
+    assert "locked" in result.output
     result = run(cli_env, "analyse", "AAA", "AAA")
     assert result.exit_code == 1 and "two different tickers" in result.output
     result = run(cli_env, "analyse", "AAA", "BBB", "--offline")

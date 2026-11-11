@@ -97,6 +97,11 @@ basket:
   # Measured (tests/test_johansen.py): at 252 rows the test finds a true
   # relation with half-life 10 only about a quarter of the time and the
   # weights are noisy, so basket results from 252-day windows are weak evidence.
+  # Basket screen (fixed 2026-11-11, before the basket was analysed): the basket
+  # passes if the sequential trace test at 5 percent finds at least one relation
+  # on the full formation period. Measured on simulated independent baskets at
+  # 2013 rows, 9.7 percent pass by chance (nominal 5 percent), so a pass is weak
+  # evidence on its own.
   det_order: 0
   k_ar_diff: 1
 
