@@ -313,6 +313,8 @@ def simulate_ledger(
             },
         }
     )
+    # Give the date columns the dtype of the bar index whatever the content, so
+    # an empty trade list and a full one have the same schema.
     for name in ("entry_signal_date", "entry_date", "exit_signal_date", "exit_date"):
-        frame[name] = pd.to_datetime(frame[name])
+        frame[name] = pd.to_datetime(frame[name]).astype(index.dtype)
     return Ledger(daily=daily, trades=frame)

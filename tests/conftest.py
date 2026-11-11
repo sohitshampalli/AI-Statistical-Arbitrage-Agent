@@ -80,3 +80,44 @@ def pytest_terminal_summary(
         terminalreporter.write_sep("-", "diagnostics")
         for line in lines:
             terminalreporter.write_line(line)
+
+
+@pytest.fixture
+def bt_config():
+    """Factory for a BacktestConfig with test values; keyword arguments override.
+
+    These are test values, not the project's settings (configs/backtest.yaml):
+    engine tests must not change when the project's settings do.
+    """
+    import dataclasses
+
+    from statarb_agent.backtest.config import BacktestConfig, ControlsConfig
+    from statarb_agent.signals.zscore import SignalParams
+
+    base = BacktestConfig(
+        formation_days=252,
+        trading_days=63,
+        signal=SignalParams(entry_z=2.0, exit_z=0.5, stop_z=4.0, time_stop_bars=30),
+        hedge_default="static",
+        hedge_variants=("static", "rolling", "kalman"),
+        kalman_memory_days=252,
+        capital=1_000_000.0,
+        gross_exposure=1.0,
+        neutrality="dollar",
+        cost_bps_per_leg=10.0,
+        cost_sensitivity_bps=(0.0, 10.0, 20.0),
+        borrow_fee_bps_annual=50.0,
+        borrow_day_count=360,
+        basket_det_order=0,
+        basket_k_ar_diff=1,
+        controls=ControlsConfig(
+            synthetic_seed=1, random_walk_seed=2, n_obs=800, half_life=10.0, beta=1.5,
+            alpha=0.3, spread_sd=0.02, sigma=0.015, batch_first_seed=100,
+            batch_size=4, placebo_first_seed=200, placebo_shuffles=4,
+        ),
+    )
+
+    def make(**overrides):
+        return dataclasses.replace(base, **overrides)
+
+    return make

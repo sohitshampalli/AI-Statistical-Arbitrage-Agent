@@ -210,6 +210,10 @@ offline mock mode for tests. No call to the paid Claude API.
   including Probabilistic and Deflated Sharpe.
 - 2026-11-11. B4 accounting done: `backtest/accounting.py`, a daily ledger with a
   hand-booked test, the equity identity and a prefix (look-ahead) test.
+- 2026-11-11. B3 walk-forward engine done: `backtest/engine.py` (pair with static,
+  rolling and Kalman hedge; Johansen basket) and `backtest/config.py`. Prefix
+  invariance holds exactly for every variant: a backtest on the first k rows
+  equals the first k rows of the full backtest.
 
 ## Reviews
 

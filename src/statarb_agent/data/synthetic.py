@@ -192,3 +192,17 @@ def simulate_basket(
         )
     index = pd.bdate_range(start=start, periods=n_obs, name="date")
     return pd.DataFrame(walks, index=index, columns=["x1", "x2", "x3"])
+
+
+def as_price_frame(log_price: pd.Series) -> pd.DataFrame:
+    """Turn a simulated log price into the frame a price source's load returns.
+
+    The series pays nothing, so close and tr_close are both exp(log price) and
+    the distribution columns are zero. This lets simulated data run through
+    exactly the same backtest code as downloaded data.
+    """
+    price = np.exp(log_price.to_numpy(dtype=float))
+    return pd.DataFrame(
+        {"close": price, "dividends": 0.0, "capital_gains": 0.0, "tr_close": price},
+        index=log_price.index,
+    )

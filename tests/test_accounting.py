@@ -217,6 +217,8 @@ def test_three_assets() -> None:
 def test_no_trades_gives_an_empty_typed_trade_list() -> None:
     ledger = run(target=np.zeros(6, dtype=int))
     assert len(ledger.trades) == 0 and "net_pnl" in ledger.trades.columns
+    # same column dtypes as a ledger with trades
+    pd.testing.assert_series_equal(ledger.trades.dtypes, run().trades.dtypes)
     assert (ledger.daily["equity"] == 1000.0).all()
 
 

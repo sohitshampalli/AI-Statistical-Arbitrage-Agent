@@ -404,3 +404,16 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   initial capital times the gross exposure; shares are fixed from entry to exit;
   cash earns nothing. A position still open at the last bar is marked to market
   and flagged open, not force-closed, so every row depends only on earlier rows.
+- Walk-forward engine (`backtest/engine.py`): window k forms on rows [63k, 63k +
+  252) and trades rows [252 + 63k, 252 + 63(k + 1)), counted from the first row so
+  later data never moves a window. Static: one OLS fit per window, frozen.
+  Rolling: an OLS fit on the 252 rows before each bar. Kalman: started from the
+  formation OLS fit and covariance, observation noise equal to the formation
+  residual variance, a forgetting factor with a memory of 252 bars, updated every
+  bar; a bar uses the forecast made before it. Basket: first Johansen eigenvector,
+  mean and deviation from the formation rows. z = spread / sigma; the z-score rule
+  decides; the ledger fills at the next close. The last signal bar of each window
+  forces flat. A pair bar with beta <= 0 is not traded. Signals use log tr_close;
+  profit is booked on close plus distributions. Look-ahead tests: prefix
+  invariance at several cut rows for each variant and the basket, and perturbing
+  all rows from asof on.
