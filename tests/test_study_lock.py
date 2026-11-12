@@ -342,6 +342,81 @@ def test_plan_edit_hidden_from_git_status_stays_locked(
     assert not is_test_period_unlocked(_study(tmp_path, True), repo)
 
 
+def _add_clean_filter(repo: Path) -> None:
+    """A clean filter kept out of the commit history: git rewrites `true` to
+    `false` whenever it reads the config, so git sees the committed content
+    while the file on disk says true."""
+    # "true" plus one more character becomes "false", so the length is kept
+    _git(repo, "config", "filter.hide.clean", "sed 's/unlocked: true./unlocked: false/'")
+    info = repo / ".git" / "info"
+    info.mkdir(exist_ok=True)
+    (info / "attributes").write_text(f"{STUDY_CONFIG.as_posix()} filter=hide\n")
+
+
+@pytest.mark.parametrize("stage", [True, False])
+def test_flag_hidden_by_a_clean_filter_stays_locked(
+    tmp_path: Path, repo: Path, stage: bool
+) -> None:
+    """Second review finding: `git status` and `git hash-object` both run the
+    clean filter, so they agree with HEAD while the file on disk says true."""
+    _commit_prereg(repo)
+    _commit_config(repo, False)
+    _add_clean_filter(repo)
+    path = repo / STUDY_CONFIG
+    # same length as the committed text, so git's size check sees no change
+    path.write_text(path.read_text().replace("unlocked: false", "unlocked: true "))
+    if stage:
+        _git(repo, "add", STUDY_CONFIG.as_posix())
+    assert load_study(path).test_period_unlocked  # the disk file does say true
+    hashed = subprocess.run(
+        ["git", "-C", str(repo), "hash-object", "--", STUDY_CONFIG.as_posix()],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", f"HEAD:{STUDY_CONFIG.as_posix()}"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert hashed == head  # git itself is fooled: the filter hides the edit
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+    with pytest.raises(LockedPeriodError):
+        require_before_test_period("2023-06-01", _study(tmp_path, True), repo)
+
+
+def test_git_redirected_to_another_repository_stays_locked(
+    tmp_path: Path, repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GIT_DIR pointing at a repository where the flag is committed must not
+    unlock this one."""
+    _commit_prereg(repo)
+    _commit_config(repo, False)
+    other = tmp_path / "other"
+    other.mkdir()
+    _git(other, "init", "-q")
+    (other / "README.md").write_text("x\n")
+    _git(other, "add", "README.md")
+    _git(other, "commit", "-q", "-m", "init")
+    _unlock(other)
+    assert is_test_period_unlocked(_study(tmp_path, True), other)
+    _write_config(repo, True)  # this repository's flag is edited, not committed
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(repo))
+    assert study_config_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
+def test_symlinked_file_stays_locked(tmp_path: Path, repo: Path) -> None:
+    _unlock(repo)
+    assert is_test_period_unlocked(_study(tmp_path, True), repo)
+    path = repo / PREREGISTRATION_FILE
+    elsewhere = tmp_path / "plan-elsewhere.md"
+    elsewhere.write_text(path.read_text())
+    path.unlink()
+    path.symlink_to(elsewhere)
+    assert preregistration_commit(repo) is None
+    assert not is_test_period_unlocked(_study(tmp_path, True), repo)
+
+
 @pytest.mark.parametrize("text", ["", "   \n\n"])
 def test_empty_preregistration_stays_locked(tmp_path: Path, repo: Path, text: str) -> None:
     _commit_config(repo, True)

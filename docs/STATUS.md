@@ -482,3 +482,13 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   paying costs twice; run.json itself is not hash-checked, only its tables; data
   checks cover the whole 2010 to 2021 window, so a late data problem also removes
   the formation-span result.
+- Lock, second hardening (review second pass, 2026-11-12): comparing `git
+  hash-object` with HEAD was not enough, because git runs a clean filter before
+  hashing; a filter defined only in `.git/config` and `.git/info/attributes` could
+  make the file on disk say true while git reported the committed false. The lock
+  now asks git only for the committed bytes (`git cat-file blob HEAD:path`,
+  replace references off, redirecting GIT_ variables removed) and compares them
+  with the bytes Python reads from disk; a symlinked file is refused. Remaining
+  limit, stated in the code: a different program named git on PATH, or an edit to
+  the module, cannot be stopped; the lock guards against accidents and casual
+  shortcuts, not against a determined owner of the machine.

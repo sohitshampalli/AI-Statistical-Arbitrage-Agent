@@ -23,6 +23,7 @@ CLI). It cannot stop a notebook that reads a Parquet file directly.
 from __future__ import annotations
 
 import datetime as dt
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -130,12 +131,27 @@ def load_study(path: Path) -> StudyConfig:
     return StudyConfig(formation, validation, test_start, unlocked)
 
 
-def _git(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+# Environment variables that tell git to use another repository, index or
+# object store than the one in the folder it is run in.
+_GIT_REDIRECTS: Final = (
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE",
+)
+
+
+def _git(repo_root: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
+    """Run git in repo_root and return its raw output.
+
+    Replace references are ignored and the variables that redirect git to
+    another repository are removed, so the answer is about this folder's own
+    committed objects.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in _GIT_REDIRECTS}
     return subprocess.run(
-        ["git", "-C", str(repo_root), *args],
+        ["git", "--no-replace-objects", "-C", str(repo_root), *args],
         capture_output=True,
-        text=True,
         check=False,
+        env=env,
     )
 
 
@@ -146,33 +162,41 @@ def committed_clean_commit(repo_root: Path, relpath: str) -> str | None:
     all of these hold:
     - the file exists, is not empty and is in HEAD;
     - `git status` reports no staged or unstaged change for it;
-    - the file on disk hashes to the same git blob as the copy in HEAD.
+    - the bytes of the file on disk, read by Python, are exactly the bytes of
+      the copy in HEAD (`git cat-file blob HEAD:path`).
 
-    The third check does not rely on git's index. `git status` can be told to
-    ignore a changed file (`git update-index --skip-worktree` or
-    `--assume-unchanged`), and with those flags an edit on disk would otherwise
-    pass as committed. Comparing the blob hashes reads the file itself.
+    The third check is the one that counts. It does not rely on git's view of
+    the working tree, which can be made blind to an edit: by an index flag
+    (`git update-index --skip-worktree` or `--assume-unchanged`), or by a clean
+    filter that rewrites the file whenever git reads it. Git is only asked for
+    the committed bytes; the comparison is done here.
 
-    Any git failure (not a repository, git missing) also gives None.
+    A consequence: if git is set to convert line endings on checkout, the file
+    on disk differs from the committed bytes and this returns None. The lock
+    then stays closed, which is the safe side.
+
+    Limits: this cannot protect against a different program named `git` placed
+    earlier on PATH, or against someone editing this module. The lock guards
+    against accidents and casual shortcuts, not against a determined owner of
+    the machine. Any git failure (not a repository, git missing) gives None.
     """
     path = Path(repo_root) / relpath
-    if not path.is_file() or path.stat().st_size == 0:
-        return None
     try:
-        in_head = _git(repo_root, "rev-parse", "--verify", "--quiet", f"HEAD:{relpath}")
+        if not path.is_file() or path.is_symlink():
+            return None
+        on_disk = path.read_bytes()
+        in_head = _git(repo_root, "cat-file", "blob", f"HEAD:{relpath}")
         status = _git(repo_root, "status", "--porcelain", "--", relpath)
-        on_disk = _git(repo_root, "hash-object", "--", relpath)
         last = _git(repo_root, "log", "-1", "--format=%H", "--", relpath)
     except OSError:
         return None
+    if not on_disk:
+        return None
     if in_head.returncode != 0 or status.returncode != 0 or status.stdout.strip():
         return None
-    committed_blob = in_head.stdout.strip()
-    if on_disk.returncode != 0 or not committed_blob:
+    if in_head.stdout != on_disk:
         return None
-    if on_disk.stdout.strip() != committed_blob:
-        return None
-    commit = last.stdout.strip()
+    commit = last.stdout.decode("ascii", errors="replace").strip()
     return commit if last.returncode == 0 and commit else None
 
 
@@ -197,9 +221,9 @@ def study_config_commit(repo_root: Path) -> str | None:
 
     Returns None unless the file is committed and clean (as for
     PREREGISTRATION.md), is a valid study config, and sets
-    `test_period_unlocked: true`. committed_clean_commit has checked that the
-    file on disk is byte for byte the copy in HEAD, so reading it from disk
-    reads the committed flag.
+    `test_period_unlocked: true`. committed_clean_commit has compared the bytes
+    on disk with the bytes in HEAD itself, so reading the file from disk reads
+    the committed flag.
     """
     commit = committed_clean_commit(repo_root, STUDY_CONFIG.as_posix())
     if commit is None:

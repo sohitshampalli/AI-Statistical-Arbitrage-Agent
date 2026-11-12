@@ -237,6 +237,10 @@ offline mock mode for tests. No call to the paid Claude API.
   screened-and-dropped candidates count as trials; the demo screens before it
   backtests; config defaults validated; exposure metrics added. 670 fast tests
   pass. Still no real-data backtest.
+- 2026-11-12. Review 1, second pass: the reviewer signed off on running the
+  real-data demo backtests and reported four remaining items (N1 to N4). N4 fixed:
+  the lock now reads the committed bytes from git and compares them with the bytes
+  on disk itself, so a clean filter or a redirected git cannot hide an edit.
 
 ## Reviews
 
