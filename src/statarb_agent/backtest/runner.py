@@ -38,7 +38,11 @@ The headline is the strategy as stated in advance: the pairs and the basket
 named in configs/pairs.yaml with the label case_study, at the default hedge and
 cost, that passed the formation screen. Pairs chosen by the user (exploratory)
 never enter it, whatever their screen result, and each pair enters at most
-once.
+once. The headline is always stated against that full list: a candidate with no
+stored run, or with no usable screen result, is named. A run whose screen
+result is different now from when it was backtested is left out and named too,
+because screening again after seeing a backtest would be selection with
+hindsight.
 """
 
 from __future__ import annotations
@@ -534,7 +538,8 @@ class Backtester:
 
         Both legs' dates are shuffled, once per seed, and each shuffled pair is
         backtested with the same settings as `real`. The result records where
-        the real run's full-span net Sharpe ratio stands among the placebos.
+        the real run's net Sharpe ratio stands among the placebos, on the full
+        span and on the formation and validation spans separately.
         """
         a, b = normalise_ticker(ticker_a), normalise_ticker(ticker_b)
         hedge = hedge or self.config.hedge_default
@@ -859,66 +864,135 @@ class Backtester:
             "exploratory_screened_run_ids": [
                 r["run_id"] for r in exploratory if r["screen_status"] == "pass"
             ],
+            # Case-study runs of ticker sets that are not in configs/pairs.yaml
+            # (a label given by hand). They are not candidates and are not held.
+            "unlisted_case_study_run_ids": [
+                r["run_id"] for r in candidates
+                if frozenset(r["tickers"])
+                not in {frozenset(t) for t in self.preregistered_candidates()}
+            ],
         }
         return self._store(run_id, "summary", manifest, {})
 
+    def preregistered_candidates(self) -> list[tuple[str, ...]]:
+        """The ticker sets the strategy was stated for: the case-study pairs
+        and the basket in configs/pairs.yaml. The unrelated control pair is a
+        control, not a candidate."""
+        pairs = self.analyser.pairs
+        out: list[tuple[str, ...]] = [
+            (p.a, p.b) for p in pairs.pairs if p.label == "case_study"
+        ]
+        out.append(tuple(pairs.basket))
+        return out
+
     def _headline(
-        self, candidates: list[dict[str, Any]], trials: list[Trial]
+        self, default_rows: list[dict[str, Any]], trials: list[Trial]
     ) -> dict[str, Any]:
         """The pre-stated strategy: an equal-weight portfolio of the screened runs.
 
-        `candidates` are the pre-registered runs at the default hedge and cost,
-        one per ticker set. The portfolio holds those whose screen status is
-        "pass". If there are none, the result is empty and the statement says
-        exactly why: nothing stored, not analysed yet, or analysed and failed.
+        Args:
+            default_rows: Stored case-study runs at the default hedge and cost,
+                one per ticker set.
+            trials: The trial log.
+
+        Every candidate in configs/pairs.yaml gets one entry with a state:
+        - "held": passed the screen when it was backtested and still does;
+        - "failed": screened and did not pass;
+        - "screen_changed": the screen result now differs from the one stored
+          with the run, so it is left out;
+        - "no_screen_result": not analysed, or the analysis was refused or
+          failed;
+        - "no_stored_run": no backtest at the default settings is stored (with
+          the reason from the trial log if a backtest was refused or failed).
+        The portfolio holds the "held" entries only. The statement always names
+        the candidates in the last three states, whether or not anything is
+        held.
         """
-        status_counts: dict[str, int] = {}
-        for row in candidates:
-            status_counts[row["screen_status"]] = (
-                status_counts.get(row["screen_status"], 0) + 1
-            )
-        rows = [r for r in candidates if r["screen_status"] == "pass"]
+        by_set = {frozenset(r["tickers"]): r for r in default_rows}
+        entries: list[dict[str, Any]] = []
+        for tickers in self.preregistered_candidates():
+            row = by_set.get(frozenset(tickers))
+            entry: dict[str, Any] = {"tickers": list(tickers), "run_id": None,
+                                     "reason": None}
+            if row is None:
+                entry["state"] = "no_stored_run"
+                entry["reason"] = self._last_backtest_problem(tickers, trials)
+            else:
+                entry["run_id"] = row["run_id"]
+                now, at_run = row["screen_status"], row["screen_status_at_run"]
+                entry.update(screen_status=now, screen_status_at_run=at_run)
+                if now != at_run:
+                    entry["state"] = "screen_changed"
+                elif now == "pass":
+                    entry["state"] = "held"
+                elif now == "fail":
+                    entry["state"] = "failed"
+                else:
+                    entry["state"] = "no_screen_result"
+            entries.append(entry)
+        states: dict[str, int] = {}
+        for entry in entries:
+            states[entry["state"]] = states.get(entry["state"], 0) + 1
+        held = [by_set[frozenset(e["tickers"])] for e in entries if e["state"] == "held"]
+        n = len(entries)
         base = {
-            "n_candidates": len(candidates),
-            "candidate_screen_status": status_counts,
-            "n_runs": len(rows),
-            "run_ids": [r["run_id"] for r in rows],
+            "n_candidates": n,
+            "candidates": entries,
+            "candidate_states": states,
+            "n_runs": len(held),
+            "run_ids": [r["run_id"] for r in held],
             "out_of_sample_span": OUT_OF_SAMPLE_SPAN,
             "spans_in_sample_for_screen": list(IN_SAMPLE_FOR_SCREEN),
         }
-        if not rows:
-            unknown = sum(
-                n for status, n in status_counts.items() if status not in ("pass", "fail")
+        notes = []
+        changed_text = (
+            "are left out because their screen result changed after they were "
+            "backtested"
+        )
+        for state, text in (
+            ("no_stored_run", "have no stored backtest at the default hedge and cost"),
+            ("no_screen_result", "have no usable formation-period screen result"),
+            ("screen_changed", changed_text),
+        ):
+            names = [
+                "/".join(e["tickers"]) + (f" ({e['reason']})" if e["reason"] else "")
+                for e in entries if e["state"] == state
+            ]
+            if names:
+                notes.append(f"{len(names)} of the {n} {text}: {'; '.join(names)}.")
+        complete = not notes
+        if held:
+            statement = (
+                f"Equal-weight portfolio of the {len(held)} pre-registered candidates "
+                f"that passed the formation-period screen, of {n} named in "
+                "configs/pairs.yaml, at the default hedge and cost. The validation "
+                "span is its out-of-sample result; the formation and full spans "
+                "include the rows the screen was computed on."
             )
-            if not candidates:
-                statement = (
-                    "No pre-registered pair or basket has a stored backtest at the "
-                    "default hedge and cost, so there is no headline yet."
-                )
-            elif unknown:
-                statement = (
-                    f"{unknown} of the {len(candidates)} pre-registered candidates "
-                    "have no usable formation-period screen result (not analysed, "
-                    "refused or failed to run), so the headline cannot be stated "
-                    "yet. Run `statarb demo` to screen them."
-                )
-            else:
-                statement = (
-                    f"All {len(candidates)} pre-registered candidates were screened "
-                    "on the formation period and none passed, so the strategy as "
-                    "stated in advance takes no positions. There is no headline "
-                    "return to report."
-                )
-            return {**base, "metrics": None, "deflated_sharpe": None,
-                    "statement": statement}
+        elif complete:
+            statement = (
+                f"All {n} pre-registered candidates were screened on the formation "
+                "period and none passed, so the strategy as stated in advance takes "
+                "no positions. There is no headline return to report."
+            )
+        else:
+            statement = (
+                "No pre-registered candidate is held, and the headline cannot be "
+                "stated yet because not every candidate has a backtest and a screen "
+                "result."
+            )
+        statement = " ".join([statement, *notes])
+        if not held:
+            return {**base, "complete": complete, "metrics": None,
+                    "deflated_sharpe": None, "statement": statement}
         runs_dir = self.project.runs_dir
-        dailies = [read_table(runs_dir, r["run_id"], "daily") for r in rows]
-        trades = [read_table(runs_dir, r["run_id"], "trades") for r in rows]
+        dailies = [read_table(runs_dir, r["run_id"], "daily") for r in held]
+        trades = [read_table(runs_dir, r["run_id"], "trades") for r in held]
         daily, pooled = equal_weight_portfolio(dailies, trades, self.config.capital)
-        benchmark = read_table(runs_dir, rows[0]["run_id"], "benchmark")["ret"]
-        first = max(pd.Timestamp(r["metrics"]["full"]["start"]) for r in rows)
+        benchmark = read_table(runs_dir, held[0]["run_id"], "benchmark")["ret"]
+        first = max(pd.Timestamp(r["metrics"]["full"]["start"]) for r in held)
         result = BacktestResult(
-            kind="portfolio", labels=tuple("+".join(r["tickers"]) for r in rows),
+            kind="portfolio", labels=tuple("+".join(r["tickers"]) for r in held),
             hedge="mixed", cost_bps=self.config.cost_bps_per_leg, daily=daily,
             trades=pooled, signals=pd.DataFrame(), windows=pd.DataFrame(),
             first_signal_date=first, settings={"capital": self.config.capital},
@@ -926,16 +1000,34 @@ class Backtester:
         spans = study_span_metrics(result, self.study, benchmark=benchmark)
         return {
             **base,
+            "complete": complete,
             "metrics": spans,
             "deflated_sharpe": deflated_sharpes(spans, trials),
-            "statement": (
-                f"Equal-weight portfolio of the {len(rows)} pre-registered candidates "
-                f"that passed the formation-period screen (of {len(candidates)}), at "
-                "the default hedge and cost. The validation span is its "
-                "out-of-sample result; the formation and full spans include the "
-                "rows the screen was computed on."
-            ),
+            "statement": statement,
         }
+
+    def _last_backtest_problem(
+        self, tickers: tuple[str, ...], trials: list[Trial]
+    ) -> str | None:
+        """Why the newest default-settings backtest of these tickers has no run.
+
+        Returns "refused: ..." or "error: ..." from the trial log, or None if
+        no such backtest was attempted.
+        """
+        cfg = self.config
+        for trial in reversed(trials):
+            if trial.kind != "backtest" or set(trial.tickers) != set(tickers):
+                continue
+            if trial.parameters.get("placebo") or trial.parameters.get("batch"):
+                continue
+            if trial.parameters.get("cost_bps_per_leg") != cfg.cost_bps_per_leg:
+                continue
+            if trial.parameters.get("hedge") not in (cfg.hedge_default, "johansen"):
+                continue
+            if trial.outcome == "ok":
+                return None
+            return f"{trial.outcome}: {trial.reason}"
+        return None
 
 
 def _one_run_per_ticker_set(

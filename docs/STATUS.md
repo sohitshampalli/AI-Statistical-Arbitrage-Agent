@@ -492,3 +492,10 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   limit, stated in the code: a different program named git on PATH, or an edit to
   the module, cannot be stopped; the lock guards against accidents and casual
   shortcuts, not against a determined owner of the machine.
+- Headline rules (final form after the second review pass): one entry per
+  candidate in `configs/pairs.yaml` (the five case-study pairs and the basket)
+  with a state: held, failed, screen_changed, no_screen_result or no_stored_run.
+  Only held entries are in the portfolio. The statement names every candidate in
+  the last three states. Do not edit `configs/screen.yaml` or analyse a demo pair
+  again after its backtest: the run would be left out of the headline as
+  screen_changed.

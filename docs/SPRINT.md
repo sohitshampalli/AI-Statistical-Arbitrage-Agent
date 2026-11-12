@@ -241,6 +241,10 @@ offline mock mode for tests. No call to the paid Claude API.
   real-data demo backtests and reported four remaining items (N1 to N4). N4 fixed:
   the lock now reads the committed bytes from git and compares them with the bytes
   on disk itself, so a clean filter or a redirected git cannot hide an edit.
+- 2026-11-12. N1 to N3 fixed: the headline is stated against the pre-registered
+  list in `configs/pairs.yaml`, names every candidate that is missing, unscreened
+  or refused, and leaves out any run whose screen result changed after it was
+  backtested.
 
 ## Reviews
 
@@ -283,6 +287,29 @@ error; equity at or below zero; config defaults outside their lists; which
 values on a row use that row; beta-neutral sizing with a moving hedge ratio; a
 constant leg; three assets with two short legs, costs and dividends; the one-bar
 window-end trade.
+
+Second pass (2026-11-12), same reviewer, on commits 03f91a3 and 77549b0. It
+re-ran its reproductions against the new code and wrote new ones.
+
+Verdict: sign-off for running the real-data demo backtests. No regression: the
+engine, ledger and metric files had an empty diff apart from docstrings and
+three column names, and its numbers reproduced to the digit (ledger re-booking
+difference 0.0; Deflated Sharpe example 0.11317 and 0.90040). F1, F2, F3, F6, F9,
+F10, F11 closed; F7 and F8 closed as documented limitations; F4, F5 and F12
+partly closed. Fast suite at that point: 670 passed.
+
+New findings in the second pass and what was done, all before the real run:
+
+| # | Finding | Action |
+|---|---|---|
+| N4 | The lock still opened through a git clean filter kept out of history: `git status` and `git hash-object` both run the filter, so they agreed with HEAD while the file on disk said true. Redirecting git with GIT_DIR also worked | Fixed in commit 659b1c4: the lock reads the committed bytes with `git cat-file` and compares them with the bytes on disk itself; replace references are off and redirecting GIT_ variables are removed; symlinks are refused. A fake `git` on PATH cannot be stopped and is stated as a limit |
+| N1 | The headline's candidates were whatever runs were stored, not the list in `configs/pairs.yaml`; a missing or refused candidate went unmentioned | Fixed: every pre-registered candidate has an entry with a state; missing ones are named with the refusal reason |
+| N2 | Screening a pair again after its backtest changed who was in the headline | Fixed: a run whose screen result differs from the one stored with it is left out and named |
+| N3 | With one candidate held, the statement was silent about unscreened ones | Fixed: the statement always names candidates with no run, no screen result or a changed screen |
+
+These four fixes were made after the reviewer's sign-off and are covered by new
+tests (the three lock tests fail on the previous lock code and pass on the new).
+They have not had a third independent pass; see docs/HANDOFF.md.
 
 ## Proposed changes
 

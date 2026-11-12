@@ -324,14 +324,20 @@ def test_run_demo_runs_everything_once(runner: Backtester) -> None:
     assert all(r["screen_status"] == r["screen_status_at_run"] for r in real_rows)
     # candidates: the five case-study pairs and the basket, not the control pair
     head = man["headline"]
-    assert head["n_candidates"] == 6 and sum(head["candidate_screen_status"].values()) == 6
+    assert head["n_candidates"] == 6 and head["complete"] is True
+    assert [tuple(e["tickers"]) for e in head["candidates"]] == [
+        ("V", "MA"), ("KO", "PEP"), ("XOM", "CVX"), ("HD", "LOW"), ("EWA", "EWC"),
+        ("KO", "PEP", "KDP"),
+    ]
+    assert set(head["candidate_states"]) <= {"held", "failed"}
+    assert sum(head["candidate_states"].values()) == 6
     passed = [t for t, st in statuses.items() if st == "pass" and t != ("V", "XOM")]
     assert head["n_runs"] == len(passed) and head["duplicate_run_ids_ignored"] == []
     if passed:
         assert head["metrics"]["validation"] is not None
     else:
         assert head["metrics"] is None
-        assert "none passed" in head["statement"]
+        assert head["statement"].startswith("All 6 pre-registered candidates were screened")
         assert "takes no positions" in head["statement"]
     # running the demo a second time does not screen anything again
     n_analyses = runner.log.count(kind="pair_analysis")
@@ -354,16 +360,15 @@ def _analysis_trial(runner: Backtester, tickers: tuple[str, ...], passed: bool) 
 def test_headline_is_the_screened_candidates_once_each(runner: Backtester) -> None:
     """The headline holds pre-registered runs that passed the screen, at the
     default hedge and cost, one per pair, and reports what is out of sample."""
-    _analysis_trial(runner, ("AAA", "BBB"), True)
-    _analysis_trial(runner, ("KO", "PEP"), False)
-    _analysis_trial(runner, ("HD", "LOW"), True)
-    chosen = runner.backtest_pair("AAA", "BBB", label="case_study")
-    runner.backtest_pair("AAA", "BBB", label="case_study", cost_bps=20.0)
-    runner.backtest_pair("AAA", "BBB", label="case_study", hedge="kalman")
-    runner.backtest_pair("KO", "PEP", label="case_study")  # failed the screen
+    _analysis_trial(runner, ("KO", "PEP"), True)
+    _analysis_trial(runner, ("HD", "LOW"), False)
+    chosen = runner.backtest_pair("KO", "PEP")
+    runner.backtest_pair("KO", "PEP", cost_bps=20.0)  # not the default cost
+    runner.backtest_pair("KO", "PEP", hedge="kalman")  # not the default hedge
+    runner.backtest_pair("HD", "LOW")  # failed the screen
     alone = runner.summarise().manifest["headline"]
-    assert alone["run_ids"] == [chosen.run_id] and alone["n_candidates"] == 2
-    assert alone["candidate_screen_status"] == {"pass": 1, "fail": 1}
+    assert alone["run_ids"] == [chosen.run_id] and alone["n_candidates"] == 6
+    assert alone["candidate_states"] == {"held": 1, "failed": 1, "no_stored_run": 4}
     assert alone["out_of_sample_span"] == "validation"
     assert alone["spans_in_sample_for_screen"] == ["full", "formation"]
     for span in ("full", "formation", "validation"):
@@ -373,21 +378,25 @@ def test_headline_is_the_screened_candidates_once_each(runner: Backtester) -> No
         assert mine["n_trades"] == theirs["n_trades"]
         # the headline has a beta to SPY and a Deflated Sharpe ratio of its own
         assert mine["beta_to_benchmark"] == pytest.approx(theirs["beta_to_benchmark"])
-        # four backtests so far, plus HD/LOW: screened above, not yet backtested
-        assert alone["deflated_sharpe"][span]["n_trials"] == 5
+        assert alone["deflated_sharpe"][span]["n_trials"] == 4
 
     # the same pair again, and with its legs swapped: still held once
-    again = runner.backtest_pair("AAA", "BBB", label="case_study")
-    swapped = runner.backtest_pair("BBB", "AAA", label="case_study")
-    second = runner.backtest_pair("HD", "LOW", label="case_study")
-    # an exploratory pair that passed the screen is listed but never held
-    _analysis_trial(runner, ("XOM", "CVX"), True)
-    exploratory = runner.backtest_pair("XOM", "CVX", label="exploratory")
+    again = runner.backtest_pair("KO", "PEP")
+    swapped = runner.backtest_pair("PEP", "KO")
+    _analysis_trial(runner, ("V", "MA"), True)
+    second = runner.backtest_pair("V", "MA")
+    # a pair the user chose that passed the screen is listed but never held
+    _analysis_trial(runner, ("AAA", "BBB"), True)
+    exploratory = runner.backtest_pair("AAA", "BBB")
+    # a case_study label given by hand to a pair that is not in pairs.yaml
+    _analysis_trial(runner, ("BIGDIV", "BBB"), True)
+    unlisted = runner.backtest_pair("BIGDIV", "BBB", label="case_study")
     man = runner.summarise().manifest
     head = man["headline"]
-    assert head["run_ids"] == [chosen.run_id, second.run_id] and head["n_runs"] == 2
+    assert head["run_ids"] == [second.run_id, chosen.run_id] and head["n_runs"] == 2
     assert head["duplicate_run_ids_ignored"] == [again.run_id, swapped.run_id]
     assert man["exploratory_screened_run_ids"] == [exploratory.run_id]
+    assert man["unlisted_case_study_run_ids"] == [unlisted.run_id]
     both = [chosen.manifest["metrics"]["validation"], second.manifest["metrics"]["validation"]]
     assert head["metrics"]["validation"]["total_return"] == pytest.approx(
         (both[0]["total_return"] + both[1]["total_return"]) / 2
@@ -395,19 +404,77 @@ def test_headline_is_the_screened_candidates_once_each(runner: Backtester) -> No
     assert head["metrics"]["validation"]["n_trades"] == both[0]["n_trades"] + both[1]["n_trades"]
 
 
-def test_headline_says_why_it_is_empty(runner: Backtester) -> None:
+def test_headline_names_every_candidate_that_is_missing(
+    runner: Backtester, downloader: FakeDownloader
+) -> None:
+    """The headline is stated against the list in configs/pairs.yaml: a candidate
+    with no stored run, a refused run or no screen result is named, also when
+    another candidate is held."""
     empty = runner.summarise().manifest["headline"]
-    assert empty["n_candidates"] == 0 and "no headline yet" in empty["statement"]
-    runner.backtest_pair("KO", "PEP", label="case_study")
-    not_screened = runner.summarise().manifest["headline"]
-    assert not_screened["candidate_screen_status"] == {"not_analysed": 1}
-    assert "cannot be stated yet" in not_screened["statement"]
-    assert "none passed" not in not_screened["statement"]
-    _analysis_trial(runner, ("KO", "PEP"), False)
-    failed = runner.summarise().manifest["headline"]
-    assert failed["candidate_screen_status"] == {"fail": 1}
-    assert "All 1 pre-registered candidates were screened" in failed["statement"]
-    assert "none passed" in failed["statement"] and failed["metrics"] is None
+    assert empty["candidate_states"] == {"no_stored_run": 6} and not empty["complete"]
+    assert "cannot be stated yet" in empty["statement"]
+    assert "6 of the 6 have no stored backtest" in empty["statement"]
+    assert "KO/PEP/KDP" in empty["statement"]
+
+    runner.backtest_pair("KO", "PEP")  # backtested but never screened
+    frame = downloader.frames["HD"]
+    downloader.frames["HD"] = frame.drop(frame.index[[400, 401]])
+    refused = runner.backtest_pair("HD", "LOW")  # stopped by a data check
+    assert refused.outcome == "refused"
+    head = runner.summarise().manifest["headline"]
+    assert head["candidate_states"] == {"no_screen_result": 1, "no_stored_run": 5}
+    assert "1 of the 6 have no usable formation-period screen result: KO/PEP." in (
+        head["statement"]
+    )
+    assert "HD/LOW (refused: Data checks failed: HD is missing 2 trading days" in (
+        head["statement"]
+    )
+    assert "none passed" not in head["statement"] and head["metrics"] is None
+
+    # one candidate passes and is held: the others are still named
+    _analysis_trial(runner, ("V", "MA"), True)
+    held = runner.backtest_pair("V", "MA")
+    head = runner.summarise().manifest["headline"]
+    assert head["run_ids"] == [held.run_id] and not head["complete"]
+    assert head["statement"].startswith("Equal-weight portfolio of the 1 pre-registered")
+    assert "of 6 named in configs/pairs.yaml" in head["statement"]
+    assert "no usable formation-period screen result: KO/PEP." in head["statement"]
+    assert "4 of the 6 have no stored backtest" in head["statement"]
+
+
+def test_headline_when_every_candidate_was_screened_and_failed(runner: Backtester) -> None:
+    for tickers in runner.preregistered_candidates():
+        _analysis_trial(runner, tickers, False)
+        if len(tickers) == 2:
+            runner.backtest_pair(*tickers)
+        else:
+            runner.backtest_basket(list(tickers))
+    head = runner.summarise().manifest["headline"]
+    assert head["candidate_states"] == {"failed": 6} and head["complete"] is True
+    assert head["statement"] == (
+        "All 6 pre-registered candidates were screened on the formation period and "
+        "none passed, so the strategy as stated in advance takes no positions. There "
+        "is no headline return to report."
+    )
+    assert head["metrics"] is None and head["n_runs"] == 0
+
+
+@pytest.mark.parametrize(("at_run", "later"), [(False, True), (True, False)])
+def test_a_screen_result_that_changed_after_the_backtest_is_not_held(
+    runner: Backtester, at_run: bool, later: bool
+) -> None:
+    """Screening a pair again after seeing its backtest must not change who is
+    in the headline: the run is left out either way and the statement says so."""
+    _analysis_trial(runner, ("KO", "PEP"), at_run)
+    record = runner.backtest_pair("KO", "PEP")
+    assert record.manifest["screen"]["status"] == ("pass" if at_run else "fail")
+    _analysis_trial(runner, ("KO", "PEP"), later)
+    head = runner.summarise().manifest["headline"]
+    entry = next(e for e in head["candidates"] if e["tickers"] == ["KO", "PEP"])
+    assert entry["state"] == "screen_changed" and entry["run_id"] == record.run_id
+    assert entry["screen_status"] != entry["screen_status_at_run"]
+    assert head["n_runs"] == 0 and head["metrics"] is None
+    assert "screen result changed after they were backtested: KO/PEP." in head["statement"]
 
 
 def test_screened_candidates_that_were_dropped_count_as_trials(runner: Backtester) -> None:
