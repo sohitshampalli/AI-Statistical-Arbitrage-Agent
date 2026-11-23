@@ -135,7 +135,32 @@ Acceptance:
 
 ## Milestone C. Dashboard (Phase 4b), all 14 sections of docs/DASHBOARD_SPEC.md
 
-Status: not started; the plan waits for the user's approval. Node v26.7.0 and npm 12.0.2 are installed (checked
+Status: plan approved 2026-11-23 with the user's decisions below; commit 0 done;
+waiting for the user's answer on the data-source and licence findings.
+
+Decisions of 2026-11-23:
+- Licences allowed: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, OFL for fonts only, MPL
+  2.0 only for unmodified dev tools. Inter and JetBrains Mono (OFL) and
+  lucide-react (ISC) approved. Every package and data source in
+  docs/THIRD_PARTY.md.
+- Installs approved: `uv add fastapi`, the planned npm packages, Playwright's
+  Chromium and lighthouse, each checked against the licence rule.
+- GET for all reading. POST for analyse and backtest jobs, calling the same
+  tested Python, with a confirm dialog showing the trial count before and after
+  and a notice before downloading an uncached ticker. Local security, each with a
+  test: bind 127.0.0.1 only; reject a foreign Origin or Host; a random
+  per-session token in a custom header on every POST; one job at a time; no
+  endpoint places orders or touches the test period.
+- Surfaces: both built on simulated data first. Real-data rolling cointegration
+  (kind diagnostic, not counted) and the real-data parameter surface (every cell
+  a counted trial, then a recomputed summary) only after asking, with the trial
+  count stated. Both labelled "stability view, not used to choose anything".
+- Design: exceptional, not a template. One Plotly template from the tokens;
+  type scale, 8 px grid, tabular figures, designed states, reduced motion;
+  layouts checked at 1280, 1440 and 1920 px; a design critique in this file after
+  each screenshot round, at least two rounds before pages.
+- Stops: after commit 5 (gallery screenshots and critique), after commit 9, at
+  the end with the section 11 checklist, and before any real-data computation. Node v26.7.0 and npm 12.0.2 are installed (checked
 2026-11-10).
 
 Work:
@@ -258,6 +283,13 @@ offline mock mode for tests. No call to the paid Claude API.
   rerun; the lock review is owed before any unlock; the validation period is
   spent for choosing designs; README results section added. Milestone B done.
   Next: the milestone C plan, for the user's approval.
+- 2026-11-23. Milestone C commit 0: licence rule in the brief, docs/THIRD_PARTY.md
+  (181 Python packages from installed metadata; data-source terms read from the
+  official pages), README statement on data use. Findings for the user: seven
+  packages outside the allowed list (none replaced); Yahoo's Terms of Service
+  section 2(d)(9) prohibits automated collection without express prior
+  permission; FRED's terms prohibit storing or caching; Alpaca's terms unread.
+  Stopped to ask before installing anything.
 
 ## Reviews
 

@@ -22,6 +22,19 @@ end of this file.
 - Before the test period is ever unlocked, the lock needs an independent review
   (see "Test-period lock: review still owed" below).
 
+## Data-source terms and licences (open, 2026-11-23)
+
+docs/THIRD_PARTY.md lists every installed package with its licence and every
+data source with its terms as read on 2026-11-23. Open questions for the author:
+Yahoo's Terms of Service section 2(d)(9) prohibits automated data collection
+without express prior permission (the project's price source is yfinance);
+FRED's terms prohibit storing or caching its content (planned source, not used);
+Alpaca's market data terms are unread (Phase 6). Seven installed packages are
+outside the allowed licence list and were reported, not replaced: arch (NCSA),
+certifi (MPL 2.0 at runtime), fqdn (MPL 2.0, dev), cffi (MIT-0), email-validator
+(Unlicense), numpy (compound licence including 0BSD and CC0-1.0), pillow
+(MIT-CMU).
+
 ## Exceptions to the no-loosening rule
 
 Two fixed-seed test bounds were changed after the test failed. Both are recorded

@@ -72,6 +72,7 @@ Small commits with clear messages. Never push without asking. After each change 
 - Alpaca: paper account only. Never fund an account or set ALPACA_PAPER_TRADE to false.
 - Claude API (Phase 4 agent) is the only paid service: prepaid credits, auto-reload off, a monthly spend limit, and token usage logged per run.
 - Do not copy code from other repositories. Reimplement ideas and cite them. If code is ever reused, keep its license notice.
+- Dependency licences: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, and OFL for fonts only. MPL 2.0 only for unmodified development tools (for example hypothesis). No GPL, AGPL, LGPL, SSPL, non-commercial, research-only or unknown licences. Every installed package and every data source is listed in docs/THIRD_PARTY.md.
 
 ## Extension after the Phase 3 gate: universe strategy (Phase 3b)
 - Inspired by cross-sectional stat-arb systems (for example noterminusgit/statarb) and Avellaneda and Lee (2010), built only on free data.

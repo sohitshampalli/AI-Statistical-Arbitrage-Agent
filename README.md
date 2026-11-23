@@ -163,9 +163,15 @@ Limitations of these numbers:
 
 ## Data sources and limitations
 
-- Prices: Yahoo Finance through the `yfinance` library (no key). It is an
-  unofficial interface intended for personal research use; check Yahoo's terms
-  before any other use. Downloaded data is never committed to this repository.
+- Prices: Yahoo Finance through the `yfinance` library (no key). The data is used
+  for personal, non-commercial research only and is not redistributed: the
+  downloaded files stay on the author's computer and are not in this
+  repository. The dashboard runs locally and is not published; screenshots of
+  its charts will be added to this README. Yahoo's Terms of Service restrict automated
+  access to its services; `docs/THIRD_PARTY.md` quotes the terms and records
+  this as an open question.
+- Every third-party package and data source, with licences and terms, is
+  listed in `docs/THIRD_PARTY.md`.
 - Survivorship bias: free data covers only tickers that still trade. Companies
   that were delisted or acquired are missing, so any universe built from it
   looks better than the real past did. Every real-data result carries this flag.
