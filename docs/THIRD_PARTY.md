@@ -246,7 +246,7 @@ locally and is not published.
 
 | Source | Status in the project | Cost | Terms page read | What the page says on our kind of use | Compliance |
 |---|---|---|---|---|---|
-| Yahoo Finance, through the yfinance library | used since Phase 2 (12 tickers downloaded once each) | no fee stated as charged; the terms say "We reserve the right to charge fees" (2(k)); no account or payment method used | https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html (version dated May 15, 2025); yfinance README "Legal Stuff" at https://github.com/ranaroussi/yfinance; Yahoo Developer API terms at https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apiforydn/index.html | Section 2(d)(9) prohibits accessing or collecting data "using any automated means" "for any purpose without our express, prior permission". Section 2(e): no access "for any commercial purpose". Section 2(h): "you must not reproduce, modify, rent, lease, sell, trade, distribute". The yfinance README: "the Yahoo! finance API is intended for personal use only". | OPEN. Personal, non-commercial, not redistributed, and downloads are infrequent (one fetch per ticker, 2 s pause). But yfinance is automated access, and the terms do not exempt personal research. See "Open questions" below. |
+| Yahoo Finance, through the yfinance library | used since Phase 2 (12 tickers downloaded once each) | no fee stated as charged; the terms say "We reserve the right to charge fees" (2(k)); no account or payment method used | https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html (version dated May 15, 2025); yfinance README "Legal Stuff" at https://github.com/ranaroussi/yfinance; Yahoo Developer API terms at https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apiforydn/index.html | Section 2(d)(9) prohibits accessing or collecting data "using any automated means" "for any purpose without our express, prior permission". Section 2(e): no access "for any commercial purpose". Section 2(h): "you must not reproduce, modify, rent, lease, sell, trade, distribute". The yfinance README: "the Yahoo! finance API is intended for personal use only". | NEW DOWNLOADS DISABLED (2026-11-23). yfinance is automated access and the terms do not exempt personal research, so the code now refuses every new download. The 12 snapshots taken on 2026-11-08 and 2026-11-10, before the terms were checked, are kept and still read; every result recorded from them stays as it is. |
 | SEC EDGAR | planned (Phase 4 to 5) | free: "Anyone can access and download this information for free." | https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data and https://www.sec.gov/privacy | "Current max request rate: 10 requests/second." "Please declare your user agent in request headers". "Information presented on sec.gov is considered public information and may be copied or further distributed". "Please consider appropriate citation to the SEC as the source." "The SEC does not allow botnets or automated tools to crawl the site." | Planned use complies if requests stay well under 10 per second, a User-Agent with a project contact is declared, only needed filings are fetched (no crawling), and the SEC is cited. |
 | FRED (Federal Reserve Bank of St. Louis) | planned (macro data) | free for personal use: "You are free to access and use FRED® at no cost for your own personal use"; an API key is required; payment method not stated | https://fred.stlouisfed.org/docs/api/terms_of_use.html and https://fred.stlouisfed.org/legal/ | Use "solely for your personal, non-commercial use". Prohibited: "Store, cache, or archive any portion of the FRED® Services or FRED® Content". The application must show: "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis." Cite the source "and note that it was accessed via FRED". | OPEN. The ban on storing or caching conflicts with the project's snapshot store. Not used yet; to be decided before any FRED download. |
 | Kenneth French Data Library | planned (factor returns, Phase 3b) | no price or payment stated; direct file downloads | https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html | Use, redistribution and citation terms: not stated. Footer: "Copyright Eugene F. Fama and Kenneth R. French". The page names its raw data sources (CRSP, MSCI, Bloomberg). | No restriction stated. The project will cite the library and the Fama and French papers and will not redistribute the files. |
@@ -254,13 +254,13 @@ locally and is not published.
 
 ## Open questions for the author
 
-1. Yahoo Finance. Yahoo's Terms of Service section 2(d)(9) prohibits automated
-   collection without express prior permission, with no exception for personal
-   research. The project already downloaded 12 tickers this way (2026-11-08 and
-   2026-11-10), and `statarb analyse` and the planned dashboard can download a
-   ticker the author types. Options: keep using yfinance as personal research
-   and state the conflict openly; stop new downloads and work only from the
-   existing snapshots; or move to another free source whose terms allow it.
+1. Yahoo Finance. Decided 2026-11-23: new downloads are disabled in code
+   (`YFINANCE_DOWNLOADS_ENABLED = False` in `sources/prices.py`); `statarb
+   fetch`, `analyse`, `demo`, the backtest commands and the planned dashboard job
+   refuse with a message pointing here, before any request is made. The 12
+   existing snapshots are kept. The open question is recorded: they were taken
+   with an automated tool before the terms were read. A replacement source is
+   being evaluated (see the source evaluation below).
 2. FRED. The terms prohibit storing or caching FRED content, which the snapshot
    store does by design.
 3. Alpaca. The market data terms are unread.

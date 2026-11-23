@@ -42,7 +42,7 @@ from statarb_agent.backtest.config import HEDGES
 from statarb_agent.backtest.runner import Backtester, RunRecord
 from statarb_agent.backtest.runs import list_runs
 from statarb_agent.project import Project
-from statarb_agent.sources.prices import SOURCE, DownloadError
+from statarb_agent.sources.prices import SOURCE, DownloadError, DownloadsDisabledError
 from statarb_agent.sources.tickers import normalise_ticker
 from statarb_agent.study import LockedPeriodError, find_repo_root
 from statarb_agent.trials import json_safe
@@ -184,7 +184,7 @@ def fetch(
             analyser.source.sleep(analyser.source.pause_s)
         try:
             snapshot_id = analyser.fetch(ticker)
-        except DownloadError as exc:
+        except (DownloadError, DownloadsDisabledError) as exc:
             raise _fail(str(exc)) from exc
         fetched += 1
         entry = analyser.source.entry_for(ticker)
@@ -216,7 +216,9 @@ def analyse(
         analysis = analyser.analyse_pair(
             ticker_a, ticker_b, period_name=period, offline=offline
         )
-    except (ValueError, TypeError, OfflineError, LockedPeriodError) as exc:
+    except (
+        ValueError, TypeError, OfflineError, DownloadsDisabledError, LockedPeriodError
+    ) as exc:
         raise _fail(str(exc)) from exc
     _emit([analysis], as_json)
     if analysis.outcome != "ok":
@@ -236,7 +238,7 @@ def demo(
             analyses.append(
                 analyser.analyse_pair(pair.a, pair.b, label=pair.label, offline=offline)
             )
-    except (OfflineError, LockedPeriodError) as exc:
+    except (OfflineError, DownloadsDisabledError, LockedPeriodError) as exc:
         raise _fail(str(exc)) from exc
     analyses.append(analyser.analyse_synthetic())
     _emit(analyses, as_json)
@@ -365,7 +367,9 @@ def backtest(
         record = runner.backtest_pair(
             ticker_a, ticker_b, hedge=hedge, cost_bps=cost_bps, offline=offline
         )
-    except (ValueError, TypeError, OfflineError, LockedPeriodError) as exc:
+    except (
+        ValueError, TypeError, OfflineError, DownloadsDisabledError, LockedPeriodError
+    ) as exc:
         raise _fail(str(exc)) from exc
     if as_json:
         payload = {"run_id": record.run_id, "outcome": record.outcome,
@@ -395,7 +399,7 @@ def backtest_demo(
         )
     try:
         records = runner.run_demo(offline=offline)
-    except (OfflineError, LockedPeriodError) as exc:
+    except (OfflineError, DownloadsDisabledError, LockedPeriodError) as exc:
         raise _fail(str(exc)) from exc
     summary = runner.summarise()
     typer.echo(format_run_table([r.manifest for r in records if r.outcome == "ok"]))

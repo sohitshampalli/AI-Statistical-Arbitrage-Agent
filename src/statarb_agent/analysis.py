@@ -263,6 +263,9 @@ class Analyser:
 
         Raises:
             OfflineError: If a download is needed and `offline` is True.
+            DownloadsDisabledError: If a download is needed and the source's
+                downloads are disabled (yfinance since 2026-11-23). Nothing is
+                logged, because no request is made.
             DownloadError: If the source returns nothing for a ticker.
         """
         missing = [t for t in dict.fromkeys(tickers) if not self.is_cached(t)]

@@ -153,6 +153,10 @@ def test_frame_metadata_reports_types_only() -> None:
 
 
 @pytest.mark.network
+@pytest.mark.skip(
+    reason="new Yahoo Finance downloads are disabled since 2026-11-23 "
+    "(docs/THIRD_PARTY.md); the last live run passed on 2026-11-08"
+)
 def test_live_ko_download(tmp_path: Path, report_line: Callable[[str], None]) -> None:
     store = SnapshotStore(tmp_path / "data", repo_root=REPO_ROOT)
     download = make_yfinance_downloader(store.root / "cache" / "yfinance")

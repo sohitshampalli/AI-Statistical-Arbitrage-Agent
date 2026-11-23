@@ -1,5 +1,13 @@
 """Daily prices from yfinance, cached as immutable snapshots.
 
+NEW DOWNLOADS ARE DISABLED (2026-11-23). Yahoo's Terms of Service, section
+2(d)(9), prohibit collecting data from its services by automated means without
+Yahoo's express prior permission; docs/THIRD_PARTY.md quotes the terms. The
+author decided to stop new downloads and work only from the 12 snapshots taken
+before the terms were checked. Reading those snapshots (`load`) is unchanged.
+`make_yfinance_downloader` now returns a downloader that refuses before any
+network call; `YFINANCE_DOWNLOADS_ENABLED` documents the decision in code.
+
 What is stored: Yahoo's output as delivered by Ticker.history with
 auto_adjust=False, back_adjust=False, actions=True, repair=False, keepna=False,
 rounding=False, prepost=False, interval "1d". Columns Open, High, Low, Close,
@@ -92,6 +100,24 @@ class DownloadError(RuntimeError):
     """The source returned no usable data for a ticker."""
 
 
+YFINANCE_DOWNLOADS_ENABLED: Final = False
+TERMS_NOTE: Final = (
+    "New Yahoo Finance downloads are disabled (decision of 2026-11-23): Yahoo's "
+    "Terms of Service, section 2(d)(9), prohibit automated data collection "
+    "without Yahoo's express prior permission. See docs/THIRD_PARTY.md. The "
+    "existing snapshots can still be read (use --offline)."
+)
+
+
+class DownloadsDisabledError(RuntimeError):
+    """A download was asked for, but downloads from this source are disabled.
+
+    Not a DownloadError on purpose: a DownloadError means the source answered
+    with nothing and is recorded as a refused trial, while this means no
+    request was made at all, so nothing is logged.
+    """
+
+
 @dataclass(frozen=True)
 class PriceRequest:
     """One download request. `end` is exclusive, as in yfinance."""
@@ -102,15 +128,21 @@ class PriceRequest:
 
 
 def make_yfinance_downloader(cache_dir: Path, *, timeout: float = 30.0) -> Downloader:
-    """Return a downloader that calls yfinance. This is the only network call.
+    """Return the yfinance downloader. This is the only network call.
 
-    yfinance's timezone cache is pointed at `cache_dir` so it stays inside the
-    project. Exceptions are raised rather than logged, by switching
-    yf.config.debug.hide_exceptions off for the call and restoring it after
-    (the raise_errors argument is deprecated in yfinance 1.8.0).
+    While YFINANCE_DOWNLOADS_ENABLED is False (since 2026-11-23, see the module
+    docstring) the returned downloader raises DownloadsDisabledError before
+    importing yfinance or touching the network.
+
+    When enabled: yfinance's timezone cache is pointed at `cache_dir` so it
+    stays inside the project, and exceptions are raised rather than logged, by
+    switching yf.config.debug.hide_exceptions off for the call and restoring it
+    after (the raise_errors argument is deprecated in yfinance 1.8.0).
     """
 
     def download(ticker: str, start: str, end: str) -> pd.DataFrame:
+        if not YFINANCE_DOWNLOADS_ENABLED:
+            raise DownloadsDisabledError(f"{ticker}: {TERMS_NOTE}")
         import yfinance as yf
 
         cache_dir.mkdir(parents=True, exist_ok=True)

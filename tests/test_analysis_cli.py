@@ -384,3 +384,41 @@ def test_the_look_ahead_test_can_fail(
     assert run(cli_env, "fetch", "AAA", "--refresh").exit_code == 0
     after = _analyse_json(cli_env)
     assert after["result"]["stats"] != before["result"]["stats"]
+
+
+# Downloads disabled (2026-11-23) -----------------------------------------------
+
+
+@pytest.fixture
+def cli_real_downloader(project: Project) -> Project:
+    """The CLI with the real (disabled) yfinance downloader, no fake injected."""
+    return project
+
+
+def test_cli_cannot_download_and_logs_nothing(cli_real_downloader: Project) -> None:
+    project = cli_real_downloader
+    result = run(project, "fetch", "KO")
+    assert result.exit_code == 1
+    assert "downloads are disabled" in result.output and "docs/THIRD_PARTY.md" in result.output
+    for args in (("analyse", "KO", "PEP"), ("demo",)):
+        result = run(project, *args)
+        assert result.exit_code == 1 and "docs/THIRD_PARTY.md" in result.output
+    assert not project.trials_path.exists()
+    assert not (project.data_dir / "manifest.json").exists()
+
+
+def test_cached_snapshots_still_work_with_downloads_disabled(
+    project: Project, downloader: FakeDownloader, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Snapshots stored earlier stay readable: analyse runs from them offline."""
+    monkeypatch.setattr(
+        "statarb_agent.sources.prices.make_yfinance_downloader",
+        lambda cache_dir, **kwargs: downloader,
+    )
+    assert run(project, "fetch", "AAA", "BBB", "SPY").exit_code == 0
+    monkeypatch.undo()  # back to the real, disabled downloader
+    result = run(project, "analyse", "AAA", "BBB", "--offline")
+    assert result.exit_code == 0, result.output
+    result = run(project, "analyse", "AAA", "KO")  # KO is not cached
+    assert result.exit_code == 1 and "docs/THIRD_PARTY.md" in result.output
+    assert TrialLog(project.trials_path).count() == 1

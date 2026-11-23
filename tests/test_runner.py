@@ -639,3 +639,15 @@ def test_cli_backtest_demo_refuses_a_second_run(cli_env: Project) -> None:
     assert TrialLog(cli_env.trials_path).count() == n_trials
     kinds = [m["kind"] for m in list_runs(cli_env.runs_dir)]
     assert kinds.count("summary") == 2 and kinds.count("backtest") == 75
+
+
+def test_backtest_of_an_uncached_ticker_is_refused_without_a_trial(
+    project: Project,
+) -> None:
+    """With the real (disabled) downloader nothing is fetched or logged."""
+    from statarb_agent.sources.prices import DownloadsDisabledError
+
+    runner = Backtester(Analyser(project))
+    with pytest.raises(DownloadsDisabledError, match="docs/THIRD_PARTY.md"):
+        runner.backtest_pair("KO", "PEP")
+    assert runner.log.count() == 0

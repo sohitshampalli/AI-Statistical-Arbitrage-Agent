@@ -23,7 +23,7 @@ Requirements: [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 itself).
 git clone <this repository> && cd statarb-agent
 uv sync
 uv run pytest -q            # fast tests, no network
-uv run statarb demo         # downloads the demo tickers, then analyses them
+uv run statarb demo --offline   # analyses the demo pairs from local snapshots
 uv run statarb analyse KO PEP
 ```
 
@@ -31,8 +31,8 @@ Commands:
 
 | Command | What it does |
 |---|---|
-| `uv run statarb fetch TICKER...` | Download daily prices for tickers that are not cached. `--refresh` makes a new snapshot. |
-| `uv run statarb analyse A B` | Analyse any two US tickers on the formation period (2010 to 2017). Downloads what is missing unless `--offline`. `--json` prints JSON. |
+| `uv run statarb fetch TICKER...` | Download daily prices for tickers that are not cached. Disabled since 2026-11-23 (see Data sources). |
+| `uv run statarb analyse A B` | Analyse any two US tickers on the formation period (2010 to 2017). Needs local snapshots (downloads are disabled). `--json` prints JSON. |
 | `uv run statarb demo` | Analyse every demo pair, the control pair and the synthetic pair. |
 | `uv run statarb backtest A B` | Walk-forward backtest of two tickers on 2010 to 2021 (formation and validation). |
 | `uv run statarb backtest-demo` | Every pre-stated backtest and control, once. Refuses to run twice. |
@@ -167,9 +167,14 @@ Limitations of these numbers:
   for personal, non-commercial research only and is not redistributed: the
   downloaded files stay on the author's computer and are not in this
   repository. The dashboard runs locally and is not published; screenshots of
-  its charts will be added to this README. Yahoo's Terms of Service restrict automated
-  access to its services; `docs/THIRD_PARTY.md` quotes the terms and records
-  this as an open question.
+  its charts will be added to this README.
+- New Yahoo Finance downloads are disabled since 2026-11-23. Yahoo's Terms of
+  Service prohibit automated data collection without its express prior
+  permission (section 2(d)(9), quoted in `docs/THIRD_PARTY.md`). All results in
+  this README come from 12 snapshots downloaded on 2026-11-08 and 2026-11-10,
+  before the terms were checked; they are kept and documented as such. The
+  commands refuse to download anything new and work from those snapshots
+  (`--offline`).
 - Every third-party package and data source, with licences and terms, is
   listed in `docs/THIRD_PARTY.md`.
 - Survivorship bias: free data covers only tickers that still trade. Companies
@@ -180,13 +185,13 @@ Limitations of these numbers:
   `data/manifest.json` (committed) lists every snapshot with its source, request,
   retrieval time and hashes.
 - Back up `data/raw/` outside git (for example with Time Machine). The snapshot
-  files are not in the repository, and a snapshot that is lost cannot be
-  downloaded again in the same form: a new download gets a new snapshot id.
-- A fresh clone has the manifest but not the snapshot files. `statarb analyse`
-  and `statarb demo` download new snapshots when a file is missing. Yahoo
-  occasionally revises history, so numbers from a fresh download can differ
-  slightly from the ones above. Every result records the snapshot ids it used,
-  so two runs can always be told apart.
+  files are not in the repository, and with downloads disabled a lost snapshot
+  cannot be replaced.
+- A fresh clone has the manifest but not the snapshot files, and cannot
+  download them while Yahoo downloads are disabled, so the real-data results
+  cannot be reproduced from a fresh clone until a replacement source is in
+  place. Everything on simulated data (the tests and the control batches) runs
+  from a fresh clone. Every result records the snapshot ids it used.
 - Study periods: formation 2010 to 2017, validation 2018 to 2021, test from
   2022. The test period is locked in code: nothing can read or compute on it
   until a pre-registration file and an unlock flag are both committed.

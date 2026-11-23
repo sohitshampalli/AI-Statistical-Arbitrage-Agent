@@ -494,3 +494,38 @@ def test_fetch_refuses_a_conversion_that_changes_values(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="would change values"):
         src.fetch(PriceRequest("KO", "2010-01-01", "2020-01-01"))
     assert src.store.manifest.entries() == []
+
+
+# Downloads disabled (2026-11-23) -----------------------------------------------
+
+
+def test_yfinance_downloads_are_disabled(tmp_path: Path) -> None:
+    """The real downloader refuses before importing yfinance or using the network.
+
+    The autouse network guard in conftest.py would turn any network call into a
+    different error, so getting DownloadsDisabledError shows no call was made.
+    """
+    from statarb_agent.sources.prices import (
+        TERMS_NOTE,
+        YFINANCE_DOWNLOADS_ENABLED,
+        DownloadsDisabledError,
+        make_yfinance_downloader,
+    )
+
+    assert YFINANCE_DOWNLOADS_ENABLED is False
+    download = make_yfinance_downloader(tmp_path / "cache")
+    with pytest.raises(DownloadsDisabledError, match="docs/THIRD_PARTY.md"):
+        download("KO", "2010-01-01", "2022-01-01")
+    assert "2(d)(9)" in TERMS_NOTE
+    assert not (tmp_path / "cache").exists()  # nothing was set up either
+
+
+def test_fetch_through_the_default_downloader_stores_nothing(tmp_path: Path) -> None:
+    from statarb_agent.sources.prices import DownloadsDisabledError
+
+    store = SnapshotStore(tmp_path / "data", repo_root=REPO_ROOT)
+    source = YFinancePrices(store, study=STUDY, pause_s=0.0)  # the real downloader
+    with pytest.raises(DownloadsDisabledError):
+        source.fetch(PriceRequest("KO", "2010-01-01", "2022-01-01"))
+    assert store.manifest.entries() == []
+    assert not (tmp_path / "data" / "raw").exists()

@@ -35,6 +35,19 @@ certifi (MPL 2.0 at runtime), fqdn (MPL 2.0, dev), cffi (MIT-0), email-validator
 (Unlicense), numpy (compound licence including 0BSD and CC0-1.0), pillow
 (MIT-CMU).
 
+## Yahoo downloads disabled (2026-11-23)
+
+The author's decision on the Yahoo terms question: new yfinance downloads are
+disabled in code (`YFINANCE_DOWNLOADS_ENABLED = False` in `sources/prices.py`).
+The downloader raises `DownloadsDisabledError` before importing yfinance or
+making any request, with a message pointing to docs/THIRD_PARTY.md; `fetch`,
+`analyse`, `demo`, `backtest` and `backtest-demo` (and the planned dashboard
+job) fail on an uncached ticker and log nothing. The 12 snapshots from
+2026-11-08 and 2026-11-10 and every result recorded from them are unchanged and
+documented as produced with Yahoo data before the terms check. The live network
+test is skipped. A replacement source is being evaluated; until one is chosen,
+a fresh clone cannot reproduce the real-data results.
+
 ## Exceptions to the no-loosening rule
 
 Two fixed-seed test bounds were changed after the test failed. Both are recorded
