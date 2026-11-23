@@ -135,8 +135,8 @@ Acceptance:
 
 ## Milestone C. Dashboard (Phase 4b), all 14 sections of docs/DASHBOARD_SPEC.md
 
-Status: plan approved 2026-11-23 with the user's decisions below; commit 0 done;
-waiting for the user's answer on the data-source and licence findings.
+Status: plan approved 2026-11-23 with the user's decisions below; commit 0 done.
+Dashboard commit 1 waits until the author chooses a price source.
 
 Decisions of 2026-11-23:
 - Licences allowed: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, OFL for fonts only, MPL
@@ -290,6 +290,12 @@ offline mock mode for tests. No call to the paid Claude API.
   section 2(d)(9) prohibits automated collection without express prior
   permission; FRED's terms prohibit storing or caching; Alpaca's terms unread.
   Stopped to ask before installing anything.
+- 2026-11-23. The author's decisions on commit 0, carried out in three commits:
+  new Yahoo downloads disabled in code (3fbdce8); the licence rule widened and
+  arch removed (3a945b9); the replacement-source evaluation recorded in
+  docs/THIRD_PARTY.md. No source read meets every requirement: Tiingo needs a
+  card and forbids persistent storage, Alpaca's free history starts in 2016,
+  EODHD's free tier has one year. Stopped for the author's choice of source.
 
 ## Reviews
 

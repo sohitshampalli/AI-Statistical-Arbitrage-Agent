@@ -247,6 +247,32 @@ locally and is not published.
 | Kenneth French Data Library | planned (factor returns, Phase 3b) | no price or payment stated; direct file downloads | https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html | Use, redistribution and citation terms: not stated. Footer: "Copyright Eugene F. Fama and Kenneth R. French". The page names its raw data sources (CRSP, MSCI, Bloomberg). | No restriction stated. The project will cite the library and the Fama and French papers and will not redistribute the files. |
 | Alpaca (paper trading and free market data) | planned (Phase 6) | Basic plan "Free"; paper trading "does not require real money"; payment method for paper sign-up not stated | https://alpaca.markets/disclosures and https://docs.alpaca.markets/docs/about-market-data-api | Basic plan: historical API "200 / min"; real-time equities from "the IEX exchange" only. The operative terms (Terms and Conditions PDF and the NYSE and NASDAQ market data agreements linked from the disclosures page) could not be read as text on 2026-11-23. | NOT VERIFIED. Read the Terms and Conditions and the market data agreements before Phase 6. |
 
+## Replacement price source: evaluation of 2026-11-23
+
+Requirements: free with no payment method; automated API access permitted;
+local storage permitted for personal, non-commercial use; daily history from
+2010 or earlier; dividends and splits; workable rate limits. Pages read on
+2026-11-23 by a web-reading subagent; no account was created and no data was
+downloaded. Quotes are verbatim from its report. "Not read" means the page did
+not load (HTTP 403 or 404, an empty page, or a PDF that came back as binary).
+
+| Source | Free, no payment method | API allowed | Local storage | History to 2010 | Dividends and splits | Rate limits (free) | Result |
+|---|---|---|---|---|---|---|---|
+| Tiingo | free "Starter" plan, but ToS 9.2: "You must provide Company with a valid credit card" "as a condition to signing up for the Services" | yes, ToS 7.3: "All data via the API is for internal consumption only." | no, ToS 1.6(a): "you may not write, save, archive, back up, or otherwise retain Tiingo Data in any persistent or durable storage"; the paid-plan exception is not given "for a Starter Plan" | yes: "30+ Years" | yes: divCash and splitFactor fields | "Max Requests Per Hour 50", "Max Requests Per Day 1000" | fails: card at sign-up and no persistent storage |
+| Alpaca market data | Basic plan "$0/mo"; card not stated | docs describe HTTP and WebSocket access; the governing terms (Terms and Conditions, NYSE and NASDAQ agreements) are PDFs that were not read | not stated | no: "Historical data timeframe, Since 2016" | adjusted bars only (split and dividend adjustment); no event fields on the bars endpoint | "200 / min" | fails: history from 2016 |
+| EODHD | yes, FAQ: "You do not need a credit card to start a free trial." | yes (API key) | yes: "Non-Professional Users are permitted to store, manipulate, and analyze the data for private, non-commercial purposes." | no: free tier "1 yr" | yes: "Dividends & splits" "Included" | 20 calls a day, 20 a minute | fails: one year of history |
+| Alpha Vantage | free key; card not stated | terms not read | not stated | not stated | not stated | "25 API requests per day" | not established |
+| Twelve Data | "$0" Basic, "Internal non-display usage" | not stated | not stated | not stated | no: Dividends and Splits "No" on Basic | "8 (800 a day)" | fails: no dividends or splits |
+| Marketstack | free | not stated | not stated | no: "1 Year History" | not checked | "100 Requests / mo" | fails: one year of history |
+| Polygon.io (Massive) | no free stock tier in the readable pricing text | | | | | | fails: no free tier found |
+| Financial Modeling Prep | not read (HTTP 403) | | | | | | not established |
+| Nasdaq Data Link | not read (page without content) | | | | | | not established |
+| Stooq | not read (page without content) | | | | | | not established |
+
+No source read on 2026-11-23 meets all the requirements. The sources not read
+(Financial Modeling Prep, Nasdaq Data Link, Stooq, and Alpha Vantage's terms)
+are open.
+
 ## Open questions for the author
 
 1. Yahoo Finance. Decided 2026-11-23: new downloads are disabled in code

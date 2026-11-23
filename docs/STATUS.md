@@ -52,8 +52,9 @@ making any request, with a message pointing to docs/THIRD_PARTY.md; `fetch`,
 job) fail on an uncached ticker and log nothing. The 12 snapshots from
 2026-11-08 and 2026-11-10 and every result recorded from them are unchanged and
 documented as produced with Yahoo data before the terms check. The live network
-test is skipped. A replacement source is being evaluated; until one is chosen,
-a fresh clone cannot reproduce the real-data results.
+test is skipped. A replacement source was evaluated on 2026-11-23 (table in
+docs/THIRD_PARTY.md): none of the sources read meets every requirement. Until
+the author chooses one, a fresh clone cannot reproduce the real-data results.
 
 ## Exceptions to the no-loosening rule
 

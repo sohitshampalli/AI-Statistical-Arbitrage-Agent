@@ -1,19 +1,22 @@
 # Handoff
 
-Rewritten from scratch at every stop. Written 2026-11-23 after milestone C
-commit 0 (75becba), at an unplanned stop: the data-source terms check found
-questions the author must answer before any install.
+Rewritten from scratch at every stop. Written 2026-11-23, at the stop for the
+author's choice of a replacement price source (before dashboard commit 1).
 
 ## Where things stand
 
-- Last commit: 75becba (licence rule, docs/THIRD_PARTY.md, README data
-  statement). Working tree clean. Nothing pushed.
-- Tests: `uv run pytest -q` 687 passed; `uv run pytest -q -m slow` 15 passed at
-  a41d5b9 (no code changed since); ruff clean.
-- Trial log: 97 lines. Do not run analyse, demo, backtest or backtest-demo.
-- Waiting for the author on: Yahoo's Terms of Service section 2(d)(9) (automated
-  collection), FRED's ban on storing data, and seven packages outside the allowed
-  licence list. See docs/THIRD_PARTY.md, "Open questions".
+- Commits since milestone B: 75becba (licence rule and inventory), 3fbdce8 (new
+  Yahoo downloads disabled), 3a945b9 (licence rule widened, arch removed), and
+  the source-evaluation and handoff commit on top. Working tree clean. Nothing
+  pushed.
+- Tests: `uv run pytest -q` 692 passed, 16 deselected; `uv run pytest -q -m slow`
+  15 passed; ruff clean; no em dashes or emojis.
+- Trial log: 97 lines, unchanged. Do not run analyse, demo, backtest or
+  backtest-demo.
+- New Yahoo downloads are disabled in code. Every command works offline from
+  the 12 snapshots in data/raw/ (back them up; they cannot be re-downloaded).
+- Waiting for the author: which price source to use. docs/THIRD_PARTY.md has
+  the evaluation; none of the sources read passes every requirement.
 
 ## Finished and verified
 
@@ -39,14 +42,15 @@ questions the author must answer before any install.
 
 ## Not started
 
-- Milestone C commits 1 to 14 (plan approved 2026-11-23, recorded in
-  docs/SPRINT.md). Nothing installed yet (fastapi, npm packages, Playwright).
+- Milestone C commits 1 to 14 (plan and decisions in docs/SPRINT.md). Nothing
+  installed for it yet (fastapi, npm packages, Playwright).
+- A replacement price source in sources/ (after the author's choice).
 - Milestone D: universe strategy (Phase 3b). Milestone E: agent scaffolding.
 
 ## Open decisions waiting for the user
 
-- The three data-source questions and the seven licence findings in
-  docs/THIRD_PARTY.md.
+- The choice of a replacement price source (docs/THIRD_PARTY.md, evaluation
+  of 2026-11-23). FRED and Alpaca trading are deferred.
 - The proposals in docs/SPRINT.md ("Proposed changes"): a per-window gate and a
   basket placebo. Both would need simulation-only derivations, since the
   validation period is spent.
@@ -96,7 +100,10 @@ grep -nP "\x{2014}|\x{2013}|[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]" -r src tests
 > docs/SPRINT.md, docs/THIRD_PARTY.md and docs/DASHBOARD_SPEC.md in full, and look
 > at design/inspiration/. Run git status, git --no-pager log --oneline -10,
 > uv run pytest -q and uv run ruff check. Do not run analyse, demo, backtest or
-> backtest-demo. Apply the author's answers on the open questions in
-> docs/THIRD_PARTY.md, then continue milestone C with commit 1 as planned in
-> docs/SPRINT.md (fastapi, read-only api/store.py and api/series.py with tests).
-> Stop after commit 5 with the gallery screenshots and design critique.
+> backtest-demo. Apply the author's choice of price source. If it is a new
+> source: add it in sources/ following the existing interface (the author puts
+> any key in .env), cross-check its prices against the Yahoo snapshots (prices
+> only, no analysis or backtest, so no trials), and make it the only source the
+> download flow uses. Then start milestone C commit 1 as planned in
+> docs/SPRINT.md and stop after commit 5 with the gallery screenshots and the
+> design critique.
