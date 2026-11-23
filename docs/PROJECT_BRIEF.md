@@ -7,7 +7,7 @@ Open-source research project: do cointegration-based pairs among US large caps s
 - Folder: ~/statarb-agent (also the git repo; remote origin = github.com/sohitshampalli/AI-Statistical-Arbitrage-Agent, currently private). Branch: main.
 - Python 3.12 via uv. Package: src/statarb_agent/ with subpackages data, stats, signals, backtest, risk, agent (each has __init__.py).
 - uv caches live inside the folder (.uv-cache, .uv-python via .envrc). Run `source .envrc` in new terminals.
-- Installed: numpy 2.5.4, pandas 3.1.1, scipy 1.18.1, statsmodels 0.15.0, arch 8.0.0, yfinance 1.8.0, alpaca-py 0.45.0, pyarrow, matplotlib 3.11.2, pydantic 2.14.3, python-dotenv, typer, claude-agent-sdk 0.2.178, fastmcp 4.1.6. Dev: pytest, hypothesis, ruff, jupyter, ipykernel, nbstripout.
+- Installed: numpy 2.5.4, pandas 3.1.1, scipy 1.18.1, statsmodels 0.15.0, yfinance 1.8.0 (new downloads disabled 2026-11-23; see docs/THIRD_PARTY.md), alpaca-py 0.45.0, pyarrow, matplotlib 3.11.2, pydantic 2.14.3, python-dotenv, typer, claude-agent-sdk 0.2.178, fastmcp 4.1.6. Dev: pytest, hypothesis, ruff, jupyter, ipykernel, nbstripout. (arch 8.0.0 was removed on 2026-11-23 because nothing used it; add it back if GARCH is needed.)
 - These versions are newer than your training data. Before using any library function, check its real signature in the installed version (e.g. `uv run python -c "import statsmodels.tsa.stattools as s; help(s.coint)"`). Never write an API call from memory.
 - .gitignore ignores .venv, .uv-cache, .uv-python, .envrc, .env, /data/ (top-level only), caches.
 
@@ -72,7 +72,7 @@ Small commits with clear messages. Never push without asking. After each change 
 - Alpaca: paper account only. Never fund an account or set ALPACA_PAPER_TRADE to false.
 - Claude API (Phase 4 agent) is the only paid service: prepaid credits, auto-reload off, a monthly spend limit, and token usage logged per run.
 - Do not copy code from other repositories. Reimplement ideas and cite them. If code is ever reused, keep its license notice.
-- Dependency licences: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, and OFL for fonts only. MPL 2.0 only for unmodified development tools (for example hypothesis). No GPL, AGPL, LGPL, SSPL, non-commercial, research-only or unknown licences. Every installed package and every data source is listed in docs/THIRD_PARTY.md.
+- Dependency licences: MIT, BSD (including 0BSD), Apache 2.0, ISC, PSF, Zlib, and the permissive NCSA, MIT-0, MIT-CMU, Unlicense and CC0; OFL for fonts only; MPL 2.0 for dependencies used unmodified, at runtime or in development. No GPL, AGPL, LGPL, SSPL, non-commercial, research-only or unknown licences. Every installed package and every data source is listed in docs/THIRD_PARTY.md.
 
 ## Extension after the Phase 3 gate: universe strategy (Phase 3b)
 - Inspired by cross-sectional stat-arb systems (for example noterminusgit/statarb) and Avellaneda and Lee (2010), built only on free data.

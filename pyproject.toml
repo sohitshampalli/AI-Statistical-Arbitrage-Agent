@@ -9,7 +9,6 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "alpaca-py>=0.45.0",
-    "arch>=8.0.0",
     "claude-agent-sdk>=0.2.178",
     "fastmcp>=4.1.6",
     "matplotlib>=3.11.2",

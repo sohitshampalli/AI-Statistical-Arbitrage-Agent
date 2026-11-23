@@ -29,11 +29,18 @@ data source with its terms as read on 2026-11-23. Open questions for the author:
 Yahoo's Terms of Service section 2(d)(9) prohibits automated data collection
 without express prior permission (the project's price source is yfinance);
 FRED's terms prohibit storing or caching its content (planned source, not used);
-Alpaca's market data terms are unread (Phase 6). Seven installed packages are
-outside the allowed licence list and were reported, not replaced: arch (NCSA),
-certifi (MPL 2.0 at runtime), fqdn (MPL 2.0, dev), cffi (MIT-0), email-validator
-(Unlicense), numpy (compound licence including 0BSD and CC0-1.0), pillow
-(MIT-CMU).
+Alpaca's market data terms are unread (Phase 6).
+
+Licences, decided 2026-11-23: NCSA, MIT-0, the Unlicense, MIT-CMU, 0BSD and CC0
+are accepted as permissive, and MPL 2.0 for unmodified dependencies at runtime
+or in development; the rule in the brief and docs/THIRD_PARTY.md is updated and
+no installed package is outside it. arch (NCSA) was removed with `uv remove
+arch` because no code used it; it can be added back if a GARCH model is needed.
+
+FRED and Alpaca trading, deferred 2026-11-23. FRED's terms prohibit storing or
+caching FRED content, which conflicts with the snapshot store: using FRED would
+need an on-demand, uncached design (fetch, use in memory, keep only derived
+results) or a different source for the same series.
 
 ## Yahoo downloads disabled (2026-11-23)
 

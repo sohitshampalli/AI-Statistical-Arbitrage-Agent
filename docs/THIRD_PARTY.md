@@ -7,10 +7,12 @@ project installs and every data source it uses or plans to use.
 
 ## Licence rule
 
-Allowed for dependencies: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, and OFL for fonts
-only. MPL 2.0 only for unmodified development tools. Not allowed: GPL, AGPL, LGPL,
-SSPL, non-commercial, research-only or unknown licences. (Rule set by the author
-on 2026-11-23; also in docs/PROJECT_BRIEF.md.)
+Allowed for dependencies: MIT, BSD (including 0BSD), Apache 2.0, ISC, PSF, Zlib,
+and the permissive licences NCSA, MIT-0, MIT-CMU, the Unlicense and CC0; OFL for
+fonts only; MPL 2.0 for dependencies used unmodified, at runtime or in
+development. Not allowed: GPL, AGPL, LGPL, SSPL, non-commercial, research-only or
+unknown licences. (Rule set by the author on 2026-11-23 and widened the same day
+after the first inventory; also in docs/PROJECT_BRIEF.md.)
 
 ## Python packages
 
@@ -22,24 +24,18 @@ uvx pip-licenses --python .venv/bin/python --from mixed --format json
 ```
 
 "Group" is runtime if the package is needed by the project's runtime
-dependencies (from `uv export --no-dev`), otherwise dev. 181 packages, the project
-itself excluded.
+dependencies (from `uv export --no-dev`), otherwise dev. 180 packages, the project
+itself excluded (re-read after removing arch).
 
-### Outside the allowed list (reported to the author, not replaced)
+### Outside the allowed list
 
-| Package | Version | Licence | How it is pulled in |
-|---|---|---|---|
-| arch | 8.0.0 | NCSA (University of Illinois / NCSA Open Source License) | direct dependency, listed in the brief; no code imports it yet |
-| certifi | 2026.10.23 | MPL 2.0 | runtime, via curl_cffi (yfinance), requests and httpx; used unmodified |
-| fqdn | 1.6.0 | MPL 2.0 | dev only, via jupyter's jsonschema |
-| cffi | 2.1.1 | MIT-0 | runtime, via cryptography (fastmcp) and argon2-cffi (jupyter) |
-| email-validator | 2.3.0 | Unlicense | runtime, via fastmcp's pydantic[email] |
-| numpy | 2.5.4 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | runtime, everywhere; 0BSD and CC0-1.0 are not on the list |
-| pillow | 13.0.0 | MIT-CMU | runtime, via matplotlib |
-
-hypothesis (MPL 2.0) is an unmodified development tool and is allowed. peewee's
-metadata says UNKNOWN, but its bundled LICENSE file is the MIT text, so it is
-listed as MIT.
+None, after the rule was widened on 2026-11-23. The first inventory found seven
+packages outside the first rule; the author accepted NCSA, MIT-0, the Unlicense,
+MIT-CMU, 0BSD and CC0 as permissive and MPL 2.0 for unmodified dependencies, and
+had arch (NCSA, unused) removed. Packages under MPL 2.0, all used unmodified:
+certifi (runtime, via curl_cffi, requests and httpx), fqdn (dev, via jupyter)
+and hypothesis (dev). peewee's metadata says UNKNOWN, but its bundled LICENSE
+file is the MIT text, so it is listed as MIT.
 
 ### Full list
 
@@ -51,7 +47,6 @@ listed as MIT.
 | annotated-types | 0.8.0 | runtime | MIT | allowed |
 | anyio | 4.16.0 | runtime | MIT | allowed |
 | appnope | 1.0.0 | dev | BSD-2-Clause | allowed |
-| arch | 8.0.0 | runtime | NCSA | OUTSIDE: NCSA (direct dependency, not imported by any code yet) |
 | argon2-cffi | 25.1.0 | dev | MIT | allowed |
 | argon2-cffi-bindings | 26.1.0 | dev | MIT | allowed |
 | arrow | 1.4.0 | dev | Apache Software License | allowed |
@@ -65,8 +60,8 @@ listed as MIT.
 | bleach | 6.4.0 | dev | Apache Software License | allowed |
 | cachetools | 7.2.8 | runtime | MIT | allowed |
 | caio | 0.12.10 | runtime | Apache-2.0 | allowed |
-| certifi | 2026.10.23 | runtime | Mozilla Public License 2.0 (MPL 2.0) | OUTSIDE: MPL 2.0 at runtime (via curl_cffi for yfinance, and httpx) |
-| cffi | 2.1.1 | runtime | MIT-0 | OUTSIDE: MIT-0 (via cryptography for fastmcp, and argon2-cffi for jupyter) |
+| certifi | 2026.10.23 | runtime | Mozilla Public License 2.0 (MPL 2.0) | allowed (MPL 2.0, used unmodified) |
+| cffi | 2.1.1 | runtime | MIT-0 | allowed |
 | charset-normalizer | 3.5.2 | runtime | MIT | allowed |
 | claude-agent-sdk | 0.2.178 | runtime | MIT License | allowed |
 | click | 8.5.0 | runtime | BSD-3-Clause | allowed |
@@ -80,7 +75,7 @@ listed as MIT.
 | defusedxml | 0.7.1 | dev | Python Software Foundation License | allowed |
 | dnspython | 2.9.2 | runtime | ISC | allowed |
 | docstring_parser | 0.18.0 | runtime | MIT License | allowed |
-| email-validator | 2.3.0 | runtime | The Unlicense (Unlicense) | OUTSIDE: Unlicense (via fastmcp's pydantic[email]) |
+| email-validator | 2.3.0 | runtime | The Unlicense (Unlicense) | allowed |
 | exceptiongroup | 1.3.1 | runtime | MIT License | allowed |
 | executing | 2.3.0 | dev | MIT License | allowed |
 | fastjsonschema | 2.22.3 | dev | BSD License | allowed |
@@ -88,14 +83,14 @@ listed as MIT.
 | fastmcp-slim | 4.1.6 | runtime | Apache-2.0 | allowed |
 | fonttools | 4.68.0 | runtime | MIT | allowed |
 | formulaic | 1.2.2 | runtime | MIT | allowed |
-| fqdn | 1.6.0 | dev | MPL-2.0 | OUTSIDE: MPL 2.0, dev only (via jupyter's jsonschema) |
+| fqdn | 1.6.0 | dev | MPL-2.0 | allowed (MPL 2.0, used unmodified) |
 | griffelib | 2.4.1 | runtime | ISC | allowed |
 | h11 | 0.16.0 | runtime | MIT License | allowed |
 | httpcore | 1.0.9 | dev | BSD-3-Clause | allowed |
 | httpcore2 | 2.16.0 | runtime | BSD-3-Clause | allowed |
 | httpx | 0.28.1 | dev | BSD License | allowed |
 | httpx2 | 2.16.0 | runtime | BSD-3-Clause | allowed |
-| hypothesis | 6.170.14 | dev | MPL-2.0 | allowed: MPL 2.0, unmodified development tool |
+| hypothesis | 6.170.14 | dev | MPL-2.0 | allowed (MPL 2.0, used unmodified) |
 | idna | 3.20 | runtime | BSD-3-Clause | allowed |
 | iniconfig | 2.3.1 | dev | MIT | allowed |
 | interface_meta | 2.0.1 | runtime | MIT | allowed |
@@ -146,7 +141,7 @@ listed as MIT.
 | nest-asyncio2 | 1.7.4 | dev | BSD License | allowed |
 | notebook | 7.6.4 | dev | BSD License | allowed |
 | notebook_shim | 0.2.4 | dev | BSD License | allowed |
-| numpy | 2.5.4 | runtime | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | OUTSIDE in part: compound licence includes 0BSD and CC0-1.0 |
+| numpy | 2.5.4 | runtime | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | allowed |
 | openapi-pydantic | 0.6.0 | runtime | MIT License | allowed |
 | opentelemetry-api | 1.45.2 | runtime | Apache-2.0 | allowed |
 | packaging | 26.3 | runtime | Apache-2.0 OR BSD-2-Clause | allowed |
@@ -157,7 +152,7 @@ listed as MIT.
 | patsy | 1.0.3 | runtime | BSD License | allowed |
 | peewee | 4.5.3 | runtime | MIT (LICENSE file; package metadata says UNKNOWN) | allowed |
 | pexpect | 4.9.0 | dev | ISC License (ISCL) | allowed |
-| pillow | 13.0.0 | runtime | MIT-CMU | OUTSIDE: MIT-CMU (via matplotlib) |
+| pillow | 13.0.0 | runtime | MIT-CMU | allowed |
 | platformdirs | 4.14.5 | runtime | MIT | allowed |
 | pluggy | 1.7.0 | dev | MIT License | allowed |
 | prometheus_client | 0.26.0 | dev | Apache-2.0 AND BSD-2-Clause | allowed |
