@@ -1,20 +1,19 @@
 # Handoff
 
-Rewritten from scratch at every stop. Written 2026-11-23 at the close of sprint
-milestone B (Phase 3), by Claude Opus 5.5, which took over from Claude Fable 5.2
-during milestone B.
+Rewritten from scratch at every stop. Written 2026-11-23 after milestone C
+commit 0 (75becba), at an unplanned stop: the data-source terms check found
+questions the author must answer before any install.
 
 ## Where things stand
 
-- Milestone B is committed in the close-out commit on top of `2b92293`. Run
-  `git --no-pager log --oneline -5` for the hash.
-- Working tree clean after that commit. Nothing pushed by the assistant.
-- Tests at the close-out: `uv run pytest -q` 687 passed, 16 deselected;
-  `uv run pytest -q -m slow` 15 passed; `uv run ruff check` clean; no em dashes
-  or emojis.
-- Trial log: 97 lines. Do not run `analyse`, `demo`, `backtest` or
-  `backtest-demo` to look at results; each run adds trials. Use `statarb runs`
-  or read `reports/runs/` directly.
+- Last commit: 75becba (licence rule, docs/THIRD_PARTY.md, README data
+  statement). Working tree clean. Nothing pushed.
+- Tests: `uv run pytest -q` 687 passed; `uv run pytest -q -m slow` 15 passed at
+  a41d5b9 (no code changed since); ruff clean.
+- Trial log: 97 lines. Do not run analyse, demo, backtest or backtest-demo.
+- Waiting for the author on: Yahoo's Terms of Service section 2(d)(9) (automated
+  collection), FRED's ban on storing data, and seven packages outside the allowed
+  licence list. See docs/THIRD_PARTY.md, "Open questions".
 
 ## Finished and verified
 
@@ -40,13 +39,14 @@ during milestone B.
 
 ## Not started
 
-- Milestone C: dashboard (Phase 4b). Plan proposed in chat on 2026-11-23, waiting
-  for the user's approval. Node and npm versions are in that plan.
+- Milestone C commits 1 to 14 (plan approved 2026-11-23, recorded in
+  docs/SPRINT.md). Nothing installed yet (fastapi, npm packages, Playwright).
 - Milestone D: universe strategy (Phase 3b). Milestone E: agent scaffolding.
 
 ## Open decisions waiting for the user
 
-- Approval of the milestone C plan.
+- The three data-source questions and the seven licence findings in
+  docs/THIRD_PARTY.md.
 - The proposals in docs/SPRINT.md ("Proposed changes"): a per-window gate and a
   basket placebo. Both would need simulation-only derivations, since the
   validation period is spent.
@@ -93,12 +93,10 @@ grep -nP "\x{2014}|\x{2013}|[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]" -r src tests
 ## Next task (ready-to-paste prompt)
 
 > Read CLAUDE.md, docs/PROJECT_BRIEF.md, docs/STATUS.md, docs/HANDOFF.md,
-> docs/SPRINT.md and docs/DASHBOARD_SPEC.md in full, and look at
-> design/inspiration/. Run git status, git --no-pager log --oneline -10,
+> docs/SPRINT.md, docs/THIRD_PARTY.md and docs/DASHBOARD_SPEC.md in full, and look
+> at design/inspiration/. Run git status, git --no-pager log --oneline -10,
 > uv run pytest -q and uv run ruff check. Do not run analyse, demo, backtest or
-> backtest-demo. If the user has approved the milestone C plan, implement it
-> commit by commit in the approved order, starting with the API over the stored
-> run artifacts and the component gallery. The dashboard only reads
-> `reports/runs/` and `trials/trials.jsonl`; it computes no statistic. Follow the
-> rules at the top of docs/SPRINT.md, update STATUS.md and SPRINT.md at every
-> commit, and rewrite this file at every stop.
+> backtest-demo. Apply the author's answers on the open questions in
+> docs/THIRD_PARTY.md, then continue milestone C with commit 1 as planned in
+> docs/SPRINT.md (fastapi, read-only api/store.py and api/series.py with tests).
+> Stop after commit 5 with the gallery screenshots and design critique.
