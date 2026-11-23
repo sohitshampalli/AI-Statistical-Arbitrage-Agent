@@ -142,21 +142,72 @@ def test_expected_max_sharpe() -> None:
     assert math.isnan(m.expected_max_sharpe(10, -1.0))
 
 
-def test_expected_max_matches_simulation() -> None:
-    """The closed form approximates the mean of the largest of N normal draws.
+def exact_expected_max(n: int) -> float:
+    """Exact E[max of n independent standard normals], by numerical integration.
 
-    Measured: 1,000,000 standard normal draws (seed 0) in groups of N = 50 give
-    a mean group maximum of 2.2500; the formula gives 2.2763. The formula is the
-    published approximation and overstates the hurdle by 0.026 here, which makes
-    the Deflated Sharpe ratio slightly conservative. Bound: within 0.04, which
-    still separates it from a wrong weighting (using only the first quantile
-    term gives 2.054, only the second 2.439).
+    E[max] = integral of x * n * phi(x) * Phi(x) ** (n - 1) over the real line.
+    The density and distribution come from the standard library, independent of
+    the scipy.stats calls in the code under test. No random numbers are drawn.
     """
-    draws = np.random.default_rng(0).standard_normal((20_000, 50))
-    simulated = float(draws.max(axis=1).mean())
-    formula = m.expected_max_sharpe(50, 1.0)
-    assert formula == pytest.approx(simulated, abs=0.04)
-    assert formula > simulated  # conservative side
+    from scipy import integrate
+
+    def integrand(x: float) -> float:
+        return x * n * PHI.pdf(x) * PHI.cdf(x) ** (n - 1)
+
+    value, _ = integrate.quad(
+        integrand, -math.inf, math.inf, epsabs=1e-12, epsrel=1e-12, limit=200
+    )
+    return value
+
+
+# Measured on 2026-11-23 (printed by the measurement command, recorded in
+# docs/STATUS.md): exact value and expected_max_sharpe(n, 1.0) minus exact.
+MEASURED_GAP = {
+    2: (0.564190, -0.044434),
+    3: (0.846284, +0.006520),
+    5: (1.162964, +0.029630),
+    10: (1.538753, +0.035846),
+    20: (1.867475, +0.033233),
+    50: (2.249074, +0.027229),
+    100: (2.507594, +0.023009),
+    1000: (3.241436, +0.013686),
+    10000: (3.851616, +0.009049),
+}
+GAP_MAX_FOR_N_AT_LEAST_3 = 0.036  # largest measured gap 0.035846, at n = 10
+
+
+def test_exact_expected_max_against_closed_forms() -> None:
+    """The integrator reproduces the two known closed forms:
+    E[max of 2] = 1 / sqrt(pi) and E[max of 3] = 3 / (2 sqrt(pi))."""
+    assert exact_expected_max(2) == pytest.approx(1 / math.sqrt(math.pi), abs=1e-9)
+    assert exact_expected_max(3) == pytest.approx(1.5 / math.sqrt(math.pi), abs=1e-9)
+
+
+@pytest.mark.parametrize("n", sorted(MEASURED_GAP))
+def test_expected_max_formula_against_the_exact_value(n: int) -> None:
+    """Deterministic check of the closed form used for the Deflated Sharpe ratio.
+
+    The published formula (Bailey and Lopez de Prado 2014) is an approximation.
+    Measured against the exact value it overstates the expected maximum for every
+    n from 3 to 10000 (by 0.0065 to 0.0358, at most 2.55 percent, at n = 5),
+    which raises the hurdle and makes the Deflated Sharpe ratio slightly
+    conservative. At n = 2 it understates by 0.0444 (7.9 percent); a Deflated
+    Sharpe ratio is never reported with fewer than 2 trials, and this project's
+    counts are far above 2.
+
+    Tolerances: the exact value and the gap are deterministic, so each is checked
+    against its printed value to 1e-6 (the printed precision). For n >= 3 the gap
+    must also be positive and at most 0.036, the largest measured gap rounded up.
+    """
+    exact = exact_expected_max(n)
+    formula = m.expected_max_sharpe(n, 1.0)
+    measured_exact, measured_gap = MEASURED_GAP[n]
+    assert exact == pytest.approx(measured_exact, abs=1e-6)
+    assert formula - exact == pytest.approx(measured_gap, abs=1e-6)
+    if n >= 3:
+        assert 0.0 < formula - exact <= GAP_MAX_FOR_N_AT_LEAST_3
+    # the variance scales the whole formula: sd 0.1 gives a tenth
+    assert m.expected_max_sharpe(n, 0.01) == pytest.approx(formula / 10.0, rel=1e-12)
 
 
 def test_deflated_sharpe_ratio() -> None:

@@ -397,6 +397,42 @@ def test_code_version_in_a_throwaway_repo(
     assert code_version(plain).commit == "unknown"
 
 
+def test_appending_results_does_not_make_the_code_dirty(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The trial log, the manifest and run folders are outputs, not code.
+
+    Before the fix, the first appended trial line made every later trial of the
+    same run record dirty = true.
+    """
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    repo = tmp_path / "repo"
+    for rel in ("src/code.py", "trials/trials.jsonl", "data/manifest.json",
+                "reports/runs/r1/run.json"):
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_text("start\n")
+
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t",
+             "-c", "commit.gpgsign=false", *args],
+            check=True, capture_output=True,
+        )
+
+    git("init", "-q")
+    git("add", "-A")  # a throwaway repository inside tmp_path
+    git("commit", "-q", "-m", "c")
+    assert code_version(repo).dirty is False
+    with (repo / "trials" / "trials.jsonl").open("a") as fh:
+        fh.write('{"trial": 1}\n')
+    (repo / "data" / "manifest.json").write_text("changed\n")
+    (repo / "reports" / "runs" / "r1" / "run.json").write_text("changed\n")
+    assert code_version(repo).dirty is False
+    (repo / "src" / "code.py").write_text("edited\n")
+    assert code_version(repo).dirty is True  # a code change still counts
+
+
 def _ignored(path: str) -> bool:
     result = subprocess.run(
         ["git", "-C", str(REPO_ROOT), "check-ignore", "-q", path], check=False

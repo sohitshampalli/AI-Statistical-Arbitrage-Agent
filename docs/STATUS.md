@@ -3,11 +3,176 @@
 Phase tracker. Update this file in the same commit as the work it describes.
 Gates are defined in docs/PROJECT_BRIEF.md.
 
-## Current phase: 3. Backtester (in progress, started 2026-11-11)
+## Current phase: 3 done (gate passed 2026-11-23); next is 4b, the dashboard
 
-Phase 2 gate passed 2026-11-10. Phase 3 progress is tracked in docs/SPRINT.md,
-milestone B; notes on each piece are appended at the end of this file.
+Phase 3 (sprint milestone B) closed on 2026-11-23. Milestone C, the dashboard,
+waits for the user's approval of its plan. Notes on each Phase 3 piece are at the
+end of this file.
 
+## Standing rules added during Phase 3
+
+- No number goes into a docstring, a config comment or a doc until a command has
+  printed it. (Added 2026-11-23, after numbers were written before measuring;
+  see "Exceptions" below.)
+- The validation period (2018 to 2021) has been seen once, in the milestone B
+  demo run on 2026-11-12. It is spent for choosing designs: no setting, screen,
+  hedge variant or pair may now be chosen because of how it did on validation
+  data. A new design must be fixed from theory or simulation before it touches
+  real data, and every run of it is a new trial.
+- Before the test period is ever unlocked, the lock needs an independent review
+  (see "Test-period lock: review still owed" below).
+
+## Exceptions to the no-loosening rule
+
+Two fixed-seed test bounds were changed after the test failed. Both are recorded
+here as exceptions; the user accepted the first and had the second replaced.
+Neither failing version was committed, so git has no diff of the change; the
+history is in the test docstrings and here.
+
+1. `tests/test_kalman.py::test_recovers_a_time_varying_beta_on_one_seed`
+   (2026-11-11, accepted by the user 2026-11-23). The mean squared standardised
+   innovation on rows 1000 to 1999 was first bounded by [0.88, 1.17], the
+   calibration range over seeds 8000 to 8199 with a little headroom; its lower
+   edge was only 2.7 standard errors below 1. Seed 8300 measured 0.8743 and
+   failed. The seed was kept. The new bound is [0.821, 1.179], derived from
+   theory: under the filter's model the standardised innovations are
+   independent N(0, 1), so the mean of 1000 squares has standard error
+   sqrt(2 / 1000) = 0.0447, and the bound is 1 plus or minus 4 standard errors.
+2. `tests/test_metrics.py`, the check of the expected maximum Sharpe ratio
+   (2026-11-11, replaced 2026-11-23). The first version compared the closed form
+   with a seeded simulation (1,000,000 draws, seed 0) within 0.02, and its
+   docstring quoted values (2.2491 and 2.2555) that had never been measured. The
+   measurement gave 2.2500 (simulation) and 2.2763 (formula), and the tolerance
+   was widened to 0.04 without a derivation. On 2026-11-23 that test was replaced
+   by a deterministic comparison with the exact value (numerical integration, no
+   seed), with tolerances set from the measured error (below).
+
+Other first-version test errors in Phase 3 were wrong expectations, corrected
+without touching a tolerance: an off-by-one in the constant-window rolling OLS
+test, the decision column in the accounting prefix test, a trial count of 4 that
+should have been 5 in a runner test. Two docstrings held numbers written before
+measuring (a return correlation written as 0.73, measured 0.95; a beta and
+half-life in `test_pair_stats`); they were corrected to the measured values and
+their bounds were not changed. The standing rule above exists because of these.
+
+## Phase 3 gate evidence and the milestone B results
+
+Gate: placebo controls show no edge, the synthetic pair shows one.
+
+Tests, 2026-11-23 at the close-out commit: `uv run pytest -q` and
+`uv run pytest -q -m slow` pass (counts in docs/HANDOFF.md); ruff clean.
+
+Simulated gate tests (`tests/test_backtest_gate.py`, seeds 21000 to 21199, 200
+per row, settings from `configs/backtest.yaml`, 10 bps): cointegrated pairs mean
+net Sharpe 0.86 (static), 0.86 (rolling), 0.85 (kalman), at least 99.5 percent of
+seeds positive; random walks -0.04, -0.05, -0.05 with gross t +0.9, +1.0, +0.5 and
+no seed above a Sharpe of 1; shuffled placebos -0.05, gross t +0.1; cointegrated
+baskets 0.53; independent baskets -0.09, gross t +0.4.
+
+Control batches stored by the demo run (seeds 30000 to 30199, 200 each, full
+span, 10 bps): cointegrated pairs mean net Sharpe 0.84, 0.85, 0.86 (static,
+rolling, kalman), 99.5 to 100 percent positive, gross t +51.0, +55.6, +54.8;
+random walks -0.06, -0.03, -0.05, 41.0 to 43.0 percent positive, no seed above 1,
+gross t -0.0, +1.8, +0.5.
+
+Independent review: two passes signed off the engine, ledger, signal rule and
+metrics (docs/SPRINT.md, Reviews). A third pass on the four fixes made after the
+second sign-off never reported (the reviewer hit a usage limit).
+
+Demo run: one `statarb backtest-demo` at commit 546443e on 2026-11-12, 90 trial
+lines (trial log lines 8 to 97), 57 of them real-data backtests counted for the
+Deflated Sharpe ratio. Summary artifact `20261112T081557514915Z-dedb0ff8`.
+
+Headline: all six pre-registered candidates (V/MA, KO/PEP, XOM/CVX, HD/LOW,
+EWA/EWC and the basket KO/PEP/KDP) failed the formation screen, so the strategy as
+stated in advance takes no positions. There is no headline return.
+
+Exploratory results (pairs that failed the screen, backtested as case studies
+because the plan said to backtest them whatever the screen said). Validation
+span 2018-01-02 to 2021-12-31, 1008 days, net Sharpe at 0 / 10 / 20 bps per leg;
+Deflated Sharpe at 10 bps against 57 trials; shuffled-date placebo rate (share of
+200 placebos, both legs shuffled, static hedge, 10 bps, at least as good as the
+real pair on the validation span):
+
+| Pair | Hedge | Net Sharpe 0 / 10 / 20 | Deflated Sharpe | Placebo rate |
+|---|---|---|---|---|
+| V / MA | static | 0.81 / 0.55 / 0.29 | 0.08 | 0.100 |
+| V / MA | rolling | 0.88 / 0.60 / 0.32 | 0.10 | |
+| V / MA | kalman | 0.75 / 0.51 / 0.26 | 0.07 | |
+| KO / PEP | static | 0.17 / 0.04 / -0.09 | 0.01 | 0.398 |
+| KO / PEP | rolling | 0.25 / 0.03 / -0.18 | 0.01 | |
+| KO / PEP | kalman | 0.37 / 0.25 / 0.12 | 0.02 | |
+| XOM / CVX | static | 0.36 / 0.22 / 0.08 | 0.02 | 0.259 |
+| XOM / CVX | rolling | 0.64 / 0.49 / 0.34 | 0.07 | |
+| XOM / CVX | kalman | 0.41 / 0.26 / 0.12 | 0.03 | |
+| HD / LOW | static | 0.84 / 0.73 / 0.63 | 0.11 | 0.060 |
+| HD / LOW | rolling | 0.77 / 0.67 / 0.57 | 0.08 | |
+| HD / LOW | kalman | 0.77 / 0.67 / 0.58 | 0.08 | |
+| EWA / EWC | static | -0.11 / -0.34 / -0.56 | 0.00 | 0.638 |
+| EWA / EWC | rolling | -0.16 / -0.31 / -0.45 | 0.00 | |
+| EWA / EWC | kalman | 0.04 / -0.15 / -0.33 | 0.00 | |
+| V / XOM (control) | static | -0.65 / -0.74 / -0.82 | 0.00 | 0.896 |
+| V / XOM (control) | rolling | -0.56 / -0.63 / -0.70 | 0.00 | |
+| V / XOM (control) | kalman | -0.70 / -0.78 / -0.85 | 0.00 | |
+| KO / PEP / KDP | johansen | -0.59 / -0.68 / -0.77 | 0.00 | not run |
+
+The highest Deflated Sharpe ratio on the validation span among all 57 runs is
+0.23 (V / MA, rolling, 0 bps). V / MA and HD / LOW, the two best validation
+results, had negative formation-span Sharpe ratios at every cost level, and their
+placebo rates (0.100 and 0.060) are not below 0.05 even before allowing for the
+number of runs. No edge is claimed. Formation-span results, maximum drawdowns,
+trade counts and betas are in the run artifacts and in the 2026-11-23 report.
+
+Provenance defect in these 90 lines: trial log lines 9 to 97 (89 lines, every
+demo trial after the first) and the summary artifact record `code_dirty: true`,
+although the code was clean at 546443e. `code_version` counted the trial log as
+code, and the run had just appended to it. Fixed on 2026-11-23 (`provenance.py`
+now leaves the trial log, the manifest and the run folders out of the check);
+the existing lines are not edited.
+
+Limitations measured on the stored runs (no code change, no rerun):
+- A position open on the last bar (2021-12-31, which is not a window end: the
+  last window has 60 of 63 bars) is marked to market without its exit cost and is
+  left out of trade counts and hit rates. It happened in 12 of the 57 real runs
+  (XOM/CVX with each hedge, EWA/EWC kalman, at each cost level). The uncharged
+  exit cost is 0.098 percent of capital at 10 bps and 0.197 percent at 20 bps.
+  Charging it on the last bar lowers the validation Sharpe by 0.005 to 0.008 at
+  10 bps and 0.010 to 0.015 at 20 bps (for example XOM/CVX static at 20 bps,
+  0.083 to 0.073) and the validation total return by about 0.1 and 0.2 points.
+- The basket trades the first Johansen eigenvector as dollar weights, which is
+  not dollar-neutral, and it trades every window whatever the Johansen rank.
+  35 of its 44 windows had rank 0, and 29 of its 36 closed trades were entered in
+  such windows. Net notional at entry ranged from -0.84 to +1.00 of capital (mean
+  absolute 0.28); one trade (entered 2018-05-03) was long all three legs with
+  100 percent of capital and no hedge, and closed at +5.2 percent of capital.
+  Average absolute net exposure while in the market was 0.26 (formation) and
+  0.32 (validation) of capital. Measured beta to SPY was 0.00 to 0.01. The basket
+  was flat on 2018-07-10, the KDP day flagged for a large move and a large
+  distribution.
+- An entry decided on the bar before a window end is a one-bar trade paying entry
+  and exit costs. At 10 bps, 24 of the 576 closed trades in the 19 real
+  configurations lasted one bar; 6 of them were this window-end case (15 others
+  were ordinary exits, 2 stops, 1 not tradeable). Each costs about 0.2 percent of
+  capital at 10 bps.
+
+## Test-period lock: review still owed
+
+The four fixes made after the second review sign-off (N1 to N4, docs/SPRINT.md)
+have tests but no independent review. For the lock (N4, commit 659b1c4) the
+following paths are open or unchecked and must be reviewed before the test
+period is ever unlocked:
+- git settings passed through environment variables (`GIT_CONFIG_COUNT`,
+  `GIT_CONFIG_KEY_n`, `GIT_CONFIG_VALUE_n` and similar) are not stripped. They
+  should not change the committed bytes `git cat-file blob` returns, but that is
+  not verified.
+- The check compares bytes, then `load_study` reads the file again: a change in
+  between (a check-then-read gap) is not detected.
+- A different program named git earlier on PATH cannot be detected (stated in
+  `study.py`).
+None of this matters while the test period stays locked: the backtester's as-of
+date cannot pass 2022-01-01 and no 2022 row is ever stored.
+
+## Phase 2 steps
 ## Phase 2 steps
 
 Gate: all estimates use only data before their as-of date.
@@ -133,11 +298,13 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 
 ## Open decisions
 
-- Phase 2 or 3: the AR(1) half-life is badly biased at T = 252, the formation window.
-  Median estimate on the true spread (seeds 5000 to 5999): 8.44 at true half-life 10,
-  19.37 at 32, 25.94 at 60. A time stop of about 3 estimated half-lives would fire too
-  early. Options: a fixed time stop in configs, a longer OU window, or half-life as a
-  diagnostic only.
+- Settled 2026-11-11: the AR(1) half-life is badly biased at T = 252 (median on the
+  true spread, seeds 5000 to 5999: 8.44 at true half-life 10, 19.37 at 32, 25.94 at
+  60), so the time stop is a fixed 30 bars in `configs/backtest.yaml` and the
+  half-life is a diagnostic only.
+- Proposed, not decided: a per-window cointegration gate and a basket placebo
+  (docs/SPRINT.md, Proposed changes). The validation period is spent, so either
+  would have to be fixed from simulation first.
 
 - Phase 3: a one-shot final-test command. The test period may be used once; how
   that single run is triggered, logged and protected from repeats is decided in
@@ -151,8 +318,8 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 
 | Phase | Status |
 |---|---|
-| 2. Real pairs | in progress |
-| 3. Backtester | not started |
+| 2. Real pairs | gate passed 2026-11-10 |
+| 3. Backtester | gate passed 2026-11-23 |
 | 3b. Universe strategy | not started |
 | 4. Agent | not started |
 | 4b. Dashboard | not started |
@@ -421,10 +588,11 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   validation; metrics are reported for the whole run, for the formation period
   (from the first signal bar) and for the validation period, from the ledger rows
   dated in each span and the trades that closed in it. Controls
-  (`backtest/controls.py`): a shuffled-date placebo permutes one leg's daily moves
-  (price return and distribution yield together) and rebuilds the path, so the leg
-  keeps its return distribution and total return but loses its alignment with the
-  other leg.
+  (`backtest/controls.py`): a shuffled-date placebo permutes each leg's daily moves
+  (price return and distribution yield together), independently for the two
+  legs, and rebuilds the paths, so each leg keeps its return distribution and
+  total return but loses its alignment with the other leg (the first version
+  shuffled one leg only; see the backtest settings note below).
 - Backtest settings (`configs/backtest.yaml`, committed 2026-11-11 before any real
   backtest; the file holds each derivation): entry 2, exit 0.5, stop 4 (brief);
   time stop 30 bars, three half-lives of the design half-life 10 (on a true AR(1)
@@ -499,3 +667,13 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
   the last three states. Do not edit `configs/screen.yaml` or analyse a demo pair
   again after its backtest: the run would be left out of the headline as
   screen_changed.
+- Expected maximum Sharpe ratio, measured 2026-11-23 against the exact expected
+  maximum of N standard normals (numerical integration with scipy
+  `integrate.quad`, no random numbers): exact / formula minus exact for N = 2:
+  0.564190 / -0.044434; 3: 0.846284 / +0.006520; 5: 1.162964 / +0.029630; 10:
+  1.538753 / +0.035846; 20: 1.867475 / +0.033233; 50: 2.249074 / +0.027229; 100:
+  2.507594 / +0.023009; 1000: 3.241436 / +0.013686; 10000: 3.851616 / +0.009049.
+  The closed form overstates the expected maximum for every N from 3 to 10000
+  (at most 2.55 percent, at N = 5), which raises the hurdle and makes the Deflated
+  Sharpe ratio slightly conservative; at N = 2 it understates by 7.9 percent. The
+  test checks each printed value to 1e-6 and the gap to at most 0.036 for N >= 3.

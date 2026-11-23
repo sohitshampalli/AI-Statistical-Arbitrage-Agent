@@ -86,7 +86,8 @@ Acceptance:
 
 ## Milestone B. Backtester (Phase 3, with Kalman and Johansen)
 
-Status: in progress (started 2026-11-11).
+Status: done 2026-11-23 (Phase 3 gate passed). Closed out by the user's
+decisions of 2026-11-23, listed in the progress log.
 
 Additions from the user on 2026-11-11:
 - Before any backtest on real data, commit `configs/backtest.yaml` with every
@@ -134,7 +135,7 @@ Acceptance:
 
 ## Milestone C. Dashboard (Phase 4b), all 14 sections of docs/DASHBOARD_SPEC.md
 
-Status: not started. Node v26.7.0 and npm 12.0.2 are installed (checked
+Status: not started; the plan waits for the user's approval. Node v26.7.0 and npm 12.0.2 are installed (checked
 2026-11-10).
 
 Work:
@@ -245,6 +246,18 @@ offline mock mode for tests. No call to the paid Claude API.
   list in `configs/pairs.yaml`, names every candidate that is missing, unscreened
   or refused, and leaves out any run whose screen result changed after it was
   backtested.
+- 2026-11-12. Demo backtests run once at 546443e (90 trial lines, 57 counted);
+  trial log committed in 2b92293. All six pre-registered candidates failed the
+  screen, so the headline is empty.
+- 2026-11-23. Handover from Claude Fable 5.2 to Claude Opus 5.5. The user's
+  close-out decisions: the Kalman bound change is accepted as an exception; the
+  metrics test is replaced by a deterministic comparison with the exact expected
+  maximum; `code_version` no longer counts the trial log, the manifest or run
+  folders as code (89 affected trial lines documented, not edited); the last-bar
+  exit cost and the basket design are documented with measured numbers, no
+  rerun; the lock review is owed before any unlock; the validation period is
+  spent for choosing designs; README results section added. Milestone B done.
+  Next: the milestone C plan, for the user's approval.
 
 ## Reviews
 
@@ -309,7 +322,10 @@ New findings in the second pass and what was done, all before the real run:
 
 These four fixes were made after the reviewer's sign-off and are covered by new
 tests (the three lock tests fail on the previous lock code and pass on the new).
-They have not had a third independent pass; see docs/HANDOFF.md.
+They have not had a third independent pass: the third pass was started on
+2026-11-12 and stopped at a usage limit without a report. docs/STATUS.md
+("Test-period lock: review still owed") lists what must be reviewed before the
+test period is ever unlocked.
 
 ## Proposed changes
 

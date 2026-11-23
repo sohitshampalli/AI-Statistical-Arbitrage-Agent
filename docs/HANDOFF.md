@@ -1,82 +1,87 @@
 # Handoff
 
-Rewritten from scratch at every stop. Written 2026-11-10 at the hard gate after
-sprint milestone A.
+Rewritten from scratch at every stop. Written 2026-11-23 at the close of sprint
+milestone B (Phase 3), by Claude Opus 5.5, which took over from Claude Fable 5.2
+during milestone B.
 
 ## Where things stand
 
-- Last commit before this file: `b74df9c` (Record the demo run, the Phase 2 gate
-  evidence and the README). This file is committed on top of it.
-- Working tree clean. Nothing pushed by the assistant.
-- Tests: `uv run pytest -q` 476 passed; `uv run pytest -q -m slow` 4 passed;
-  `uv run ruff check` clean; no em dashes or emojis.
+- Milestone B is committed in the close-out commit on top of `2b92293`. Run
+  `git --no-pager log --oneline -5` for the hash.
+- Working tree clean after that commit. Nothing pushed by the assistant.
+- Tests at the close-out: `uv run pytest -q` 687 passed, 16 deselected;
+  `uv run pytest -q -m slow` 15 passed; `uv run ruff check` clean; no em dashes
+  or emojis.
+- Trial log: 97 lines. Do not run `analyse`, `demo`, `backtest` or
+  `backtest-demo` to look at results; each run adds trials. Use `statarb runs`
+  or read `reports/runs/` directly.
 
 ## Finished and verified
 
-- Phase 1 (gate passed 2026-11-06): simulator, ADF, hedge ratio, Engle-Granger
-  in both directions, AR(1) half-life, property test.
-- Phase 2 (gate passed 2026-11-10), sprint milestone A:
-  - Test-period lock (`study.py`), including the committed-config requirement.
-  - Snapshot store, manifest, ticker validation, yfinance price source with a
-    forward total-return index (`sources/`).
-  - Calendar alignment and data checks (`data/`).
-  - `pair_stats` and the screen, with values derived from simulation
-    (`configs/screen.yaml` holds the derivation).
-  - Append-only trial log (`trials.py`, `trials/trials.jsonl`).
-  - CLI `statarb fetch | analyse | demo` (`cli.py`, `analysis.py`).
-  - Twelve tickers downloaded once each; demo run recorded; README written.
-- Demo result (formation 2010 to 2017, in sample): V/MA, KO/PEP, XOM/CVX, HD/LOW,
-  EWA/EWC and the control V/XOM all fail the screen; the synthetic pair passes.
-  The table is in docs/STATUS.md and README.md.
+- Phase 1 (gate 2026-11-06) and Phase 2 (gate 2026-11-10): statistics, data
+  layer, screen, trial log, CLI. See docs/STATUS.md.
+- Phase 3 (gate 2026-11-23), sprint milestone B:
+  - Hedge ratios: static OLS, rolling OLS, hand-written Kalman filter
+    (`stats/hedge_ratio.py`, `stats/kalman.py`); Johansen (`stats/johansen.py`).
+  - Z-score rule (`signals/zscore.py`), ledger (`backtest/accounting.py`),
+    walk-forward engine (`backtest/engine.py`), metrics with Probabilistic and
+    Deflated Sharpe (`backtest/metrics.py`), span metrics (`backtest/summary.py`),
+    controls and placebos (`backtest/controls.py`), run artifacts
+    (`backtest/runs.py`), runner and headline (`backtest/runner.py`).
+  - `configs/backtest.yaml`, fixed before any real-data run, with derivations.
+  - Two independent review passes signed off the engine, ledger, signal rule and
+    metrics (docs/SPRINT.md, Reviews).
+  - One demo run on real data (2026-11-12): all six pre-registered candidates
+    failed the screen, so the strategy takes no positions. Exploratory results,
+    controls and limitations are in docs/STATUS.md and README.md.
+  - Close-out (2026-11-23): deterministic expected-maximum test, `code_version`
+    no longer counts output files as code, documentation of exceptions,
+    limitations, the spent validation period and the owed lock review.
 
 ## Not started
 
-- Milestone B: backtester (Phase 3) with Kalman and Johansen.
-- Milestone C: dashboard (Phase 4b). Node v26.7.0 and npm 12.0.2 are installed.
+- Milestone C: dashboard (Phase 4b). Plan proposed in chat on 2026-11-23, waiting
+  for the user's approval. Node and npm versions are in that plan.
 - Milestone D: universe strategy (Phase 3b). Milestone E: agent scaffolding.
 
 ## Open decisions waiting for the user
 
-- Go-ahead to start milestone B (this is the hard gate after milestone A).
-- From STATUS "Open decisions": the one-shot final-test command (Phase 3) and the
-  separate live paper-trading path (Phase 6). The half-life bias at T = 252 is
-  settled for the sprint: a fixed time stop in config, half-life as a diagnostic.
+- Approval of the milestone C plan.
+- The proposals in docs/SPRINT.md ("Proposed changes"): a per-window gate and a
+  basket placebo. Both would need simulation-only derivations, since the
+  validation period is spent.
+- Phase 3 one-shot final-test command and Phase 6 live path (docs/STATUS.md).
 
 ## Known risks and quirks
 
-- yfinance 1.8.0 returns a seconds-unit, timezone-aware index; Parquet has no
-  seconds unit, so `fetch` converts to microseconds and notes it in the
-  manifest. `raise_errors` is deprecated; the downloader toggles
-  `yf.config.debug.hide_exceptions`.
-- statsmodels 0.15.0: `adfuller(..., result_object=True)`; `coint` returns a
-  CointResult object. pytest turns FutureWarning into an error.
-- pandas 3.1.1: `bdate_range` gives `datetime64[us]`; copy-on-write makes
-  `.to_numpy()` read-only (copy before writing).
-- pytest collects imported names starting with "test" or "Test"; keep such
-  names out of library code.
-- Ruff is strict here (ISC004 on implicit string concatenation inside
-  collections, TRY004). Use `uv run ruff check --output-format concise`.
-- zsh: no word splitting, and a bare `====` in echo fails.
-- Tests cannot reach the network (autouse guard in `tests/conftest.py`).
-- Network allowance: the twelve demo tickers and the KO rerun are spent. Still
-  pre-approved for milestone D only: one fetch each of XLB, XLE, XLF, XLI, XLK,
-  XLP, XLU, XLV, XLY, XLRE, XLC. Anything else needs the user's approval.
-- Back up `data/raw/` outside git (for example with Time Machine); the user
-  asked for this note on 2026-11-11. The trial log stays committed.
-- The snapshot files are under `data/raw/` (gitignored). If they are lost, a
-  re-fetch needs approval and creates new snapshot ids.
-- Slow tests take about 3 minutes.
+- The test-period lock needs an independent review before it is ever unlocked
+  (docs/STATUS.md, "Test-period lock: review still owed").
+- Trial log lines 9 to 97 say `code_dirty: true` although the code was clean.
+  Do not edit them; the cause and fix are in docs/STATUS.md.
+- Standing rule: no number goes into a docstring or doc until a command printed it.
+- yfinance 1.8.0 returns a seconds-unit, timezone-aware index; `fetch` converts
+  to microseconds. statsmodels 0.15.0: `adfuller(..., result_object=True)`,
+  `coint` returns an object, `coint_johansen` returns complex eigenvalues (the
+  wrapper checks and drops the zero imaginary part). pandas 3.1.1: copy before
+  writing to `.to_numpy()` output; Parquet does not keep an index `freq`.
+- pytest collects imported names starting with "test" or "Test".
+- Ruff is strict (ISC004, TRY004); use `--output-format concise`.
+- zsh: no word splitting; a bare `====` in echo fails.
+- The reviewer subagent can hit the usage limit mid-review. Ask it for short,
+  ordered steps and a partial report when budget runs low.
+- Back up `data/raw/` outside git. A re-fetch needs approval and creates new
+  snapshot ids.
+- Run folders in `reports/runs/` are not in git. If they are lost, the trial log
+  still has every metric, but the tables are gone.
 
 ## Commands
 
 ```sh
 source .envrc
 uv run pytest -q
-uv run pytest -q -m slow
+uv run pytest -q -m slow                     # about 4.5 minutes
 uv run ruff check --output-format concise
-uv run statarb demo --offline
-uv run statarb analyse KO PEP --offline
-uv run python scripts/measure_formation_screen.py   # about 5 minutes
+uv run statarb runs                          # read stored results, adds no trial
 ```
 
 Dash and emoji scan (prints nothing when clean):
@@ -87,18 +92,13 @@ grep -nP "\x{2014}|\x{2013}|[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]" -r src tests
 
 ## Next task (ready-to-paste prompt)
 
-> Read CLAUDE.md, docs/PROJECT_BRIEF.md, docs/STATUS.md, docs/HANDOFF.md and
-> docs/SPRINT.md in full. Run git status, git --no-pager log --oneline -15,
-> uv run pytest -q and uv run ruff check. Then start sprint milestone B
-> (backtester, Phase 3) exactly as written in docs/SPRINT.md, beginning with B1:
-> rolling OLS and a hand-written numpy Kalman filter for the hedge ratio in
-> src/statarb_agent/stats/, each with an as-of cutoff, a known-answer test on
-> synthetic data and a test that perturbs rows at or after asof. Read
-> src/statarb_agent/stats/hedge_ratio.py, stats/_asof.py, stats/pair.py,
-> analysis.py and trials.py first. Follow the rules at the top of SPRINT.md:
-> verify every library call in the installed version, derive every parameter
-> from theory or simulation before running real pairs, log every real-data
-> evaluation in the trial log, never touch the test period, commit with
-> explicit paths using git commit --only, never push. Update STATUS.md and
-> SPRINT.md at every commit and rewrite docs/HANDOFF.md at every stop. Stop at
-> the hard gate after milestone B.
+> Read CLAUDE.md, docs/PROJECT_BRIEF.md, docs/STATUS.md, docs/HANDOFF.md,
+> docs/SPRINT.md and docs/DASHBOARD_SPEC.md in full, and look at
+> design/inspiration/. Run git status, git --no-pager log --oneline -10,
+> uv run pytest -q and uv run ruff check. Do not run analyse, demo, backtest or
+> backtest-demo. If the user has approved the milestone C plan, implement it
+> commit by commit in the approved order, starting with the API over the stored
+> run artifacts and the component gallery. The dashboard only reads
+> `reports/runs/` and `trials/trials.jsonl`; it computes no statistic. Follow the
+> rules at the top of docs/SPRINT.md, update STATUS.md and SPRINT.md at every
+> commit, and rewrite this file at every stop.
