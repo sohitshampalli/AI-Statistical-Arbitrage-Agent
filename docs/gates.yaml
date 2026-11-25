@@ -1,0 +1,67 @@
+# Phase gates, machine-readable, for the dashboard's gate tracker.
+# The gate text is from docs/PROJECT_BRIEF.md; dates and evidence are from
+# docs/STATUS.md. Each evidence entry is a pytest node id; a test checks that
+# every one of them exists. Update this file in the same commit as STATUS.md.
+gates:
+  - phase: "1"
+    title: Foundations
+    gate: Code recovers true beta and half-life on synthetic data.
+    status: passed
+    passed_on: "2026-11-06"
+    evidence:
+      - tests/test_hedge_ratio.py::test_beta_recovery
+      - tests/test_mean_reversion.py::test_half_life_strict_at_long_length
+      - tests/test_properties.py::test_recovers_truth_across_seeds_and_parameters
+  - phase: "2"
+    title: Real pairs
+    gate: All estimates use only data before their as-of date.
+    status: passed
+    passed_on: "2026-11-10"
+    evidence:
+      - tests/test_analysis_cli.py::test_cli_analyse_ignores_cached_rows_at_or_after_asof
+      - tests/test_analysis_cli.py::test_the_look_ahead_test_can_fail
+  - phase: "3"
+    title: Backtester
+    gate: Placebo controls show no edge, the synthetic pair shows one.
+    status: passed
+    passed_on: "2026-11-23"
+    evidence:
+      - tests/test_backtest_gate.py::test_cointegrated_pairs_show_an_edge
+      - tests/test_backtest_gate.py::test_random_walks_show_no_edge
+      - tests/test_backtest_gate.py::test_shuffled_placebos_show_no_edge
+      - tests/test_backtest_gate.py::test_cointegrated_baskets_show_an_edge
+      - tests/test_backtest_gate.py::test_independent_baskets_show_no_edge
+  - phase: 3b
+    title: Universe strategy
+    gate: >-
+      On a synthetic universe with known factor structure and known residual
+      OU parameters, the pipeline recovers them; placebo and shuffled controls
+      show no edge; results are net of costs with a Deflated Sharpe on
+      validation data; the test period stays untouched.
+    status: not_started
+    passed_on: null
+    evidence: []
+  - phase: "4"
+    title: Agent
+    gate: Every number in a memo traces to a logged tool output.
+    status: not_started
+    passed_on: null
+    evidence: []
+  - phase: 4b
+    title: Dashboard
+    gate: The acceptance checklist in docs/DASHBOARD_SPEC.md, section 11.
+    status: in_progress
+    passed_on: null
+    evidence: []
+  - phase: "5"
+    title: Experiment
+    gate: Results frozen before paper trades.
+    status: not_started
+    passed_on: null
+    evidence: []
+  - phase: "6"
+    title: Paper trading, README, paper
+    gate: None stated in the brief.
+    status: not_started
+    passed_on: null
+    evidence: []
