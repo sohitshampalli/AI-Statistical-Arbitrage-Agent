@@ -136,8 +136,11 @@ Acceptance:
 ## Milestone C. Dashboard (Phase 4b), all 14 sections of docs/DASHBOARD_SPEC.md
 
 Status: plan approved 2026-11-23 with the user's decisions below; commit 0 done.
-Price source decided 2026-11-25 (stay on the snapshots); commits 1 onward in
-progress.
+Price source decided 2026-11-25 (stay on the snapshots). Commits 1 to 5 done;
+stopped at the commit 5 checkpoint (gallery screenshots and design critique)
+for the author's review. Not built yet: the POST job endpoints (analyse and
+backtest, with the per-session token and one job at a time), planned with the
+pair explorer flows in commit 7.
 
 Decisions of 2026-11-23:
 - Licences allowed: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, OFL for fonts only, MPL
@@ -307,6 +310,76 @@ offline mock mode for tests. No call to the paid Claude API.
   the `YFINANCE_DOWNLOADS_ENABLED` switch; data provenance (source, snapshot
   date, "downloaded before the terms check") in the provenance drawer and on the
   Methodology page.
+- 2026-11-25. Commit 1 (7df34b1): fastapi (MIT) added; `api/store.py` reads
+  runs, summaries, the trial log, configs, pairs and the manifest without
+  writing, and reports each snapshot's source, download time and whether it
+  was downloaded before the terms check; `api/series.py` builds equity and
+  drawdown per span, tested against the stored metrics of a real engine run.
+- 2026-11-25. Commit 2 (7cfc5f8): pydantic schemas with unknown keys
+  forbidden (all 88 stored runs validate), GET routes, errors as a plain
+  message with endpoint and run id, foreign Host and Origin refused, API docs
+  pages off, `docs/gates.yaml` with evidence tests checked by a test.
+- 2026-11-25. Commit 3 (ccd6b2d): JSON Schema export to
+  `frontend/src/api/schema.json` with a Python drift test.
+- 2026-11-25. Commit 4 (266bd41): frontend scaffold (React, TypeScript 6.0,
+  Vite, Tailwind 4, tokens, bundled fonts, ESLint, Vitest, typed client,
+  formats of spec section 8, generated types with a drift test) and
+  `statarb dashboard` (127.0.0.1 only, builds when out of date, `--dev`).
+  One first-version test expectation was wrong (0.2455 rounds to 0.245 in
+  binary floating point) and was replaced; no tolerance changed.
+  TypeScript is 6.0, not 7.0: typescript-eslint supports below 6.1.
+- 2026-11-25. Commit 5 (fe9f967, screenshot clip fix 3bfc18a): the component
+  gallery at `/#/dev/components`, the app shell, and the Playwright screenshot
+  script (Apache 2.0; Chromium in the user's Playwright cache). Everything
+  under reports/ is ignored except the committed 1440 px screenshots; layout
+  checks at 1280 and 1920 px go to `reports/screenshots/layout-checks/`.
+  Three critique rounds below. Stopped for the author's review.
+
+## Design critique (milestone C)
+
+Screenshots by `npm run screenshots` in frontend/ (Playwright, 1440x900
+viewport, full page), compared with the four images in design/inspiration/.
+Every populated number in the gallery is read from the API at view time.
+
+What matches the inspiration's mood: near-black page with one soft radial glow
+at the top, dark glass cards with thin borders and an inner top highlight, a
+pill navigation bar, one cool accent, large tabular KPI numbers, and a node
+graph with thin connectors and port dots for the agent flow.
+
+What differs on purpose: no warm orange glow or orange accent (three of the
+four images use one; the spec makes blue the accent and keeps orange for
+breaks, stops and warnings); KPI numbers in JetBrains Mono with tabular
+figures (spec section 4) rather than a proportional display face; no avatar,
+chat box, icons-only navigation, sparkline decoration or imagery; every chart
+title states a finding and every card carries its source.
+
+Round 1 (first screenshots). Problems found:
+1. Cards read as flat grey slabs, not glass.
+2. The top glow was barely visible.
+3. Section notes were right-aligned and wrapped onto two lines.
+4. KPI cards had uneven heights (the label wrapped beside a pill).
+5. The table's screen column was a wall of filled red pills.
+6. The drawdown panel had the same weight as the equity curve.
+7. Long rotated axis titles crowded the chart.
+8. The node graph was sparse and its nodes said nothing about their job.
+
+Round 2. Changes: a faint navy tint, a top-down sheen and a stronger top
+highlight on cards; a larger, softer top glow; notes under section titles;
+pills under the KPI label and cards stretched to equal height; a subtle table
+pill (icon plus text, no fill); drawdown in neutral grey, 1 px, 14 percent
+fill; panel titles as annotations above each panel and a zero line on the
+return panel; one line per node on what it does. Problems left: the node
+graph's left nodes overlapped, connectors showed through the translucent
+cards and started at node centres; the chart title wrapped too early.
+
+Round 3. Changes: the agent flow laid out left to right in four columns, edge
+anchors computed in pixels from the measured width so connectors run from a
+node's right edge to the next node's left edge, port dots at each end, opaque
+node backgrounds; chart titles up to 96 characters wide. Layouts at 1280 and
+1920 px checked: the navigation fits and nothing overflows. The hover
+screenshot clip was fixed (3bfc18a).
+
+Open design questions for the author are in docs/HANDOFF.md.
 
 ## Reviews
 

@@ -3,11 +3,33 @@
 Phase tracker. Update this file in the same commit as the work it describes.
 Gates are defined in docs/PROJECT_BRIEF.md.
 
-## Current phase: 3 done (gate passed 2026-11-23); next is 4b, the dashboard
+## Current phase: 4b, the dashboard (in progress; Phase 3 gate passed 2026-11-23)
 
 Phase 3 (sprint milestone B) closed on 2026-11-23. Milestone C, the dashboard,
-has its plan approved (2026-11-23; docs/SPRINT.md) and commit 0 done. Notes on
-each Phase 3 piece are at the end of this file.
+has its plan approved (2026-11-23; docs/SPRINT.md). Commits 0 to 5 are done
+and the work is stopped at the commit 5 checkpoint (component gallery
+screenshots and design critique) for the author's review. Notes on each Phase 3
+piece are at the end of this file.
+
+## Dashboard (Phase 4b), 2026-11-25
+
+- Backend in `src/statarb_agent/api/`: a read-only store, chart series tested
+  against stored metrics, pydantic schemas (unknown keys forbidden; all 88
+  stored runs validate), GET routes, and local-only checks (127.0.0.1 bind,
+  foreign Host or Origin refused, no-frame and no-store headers). No endpoint
+  writes, places orders or touches the test period. Job endpoints (POST) are
+  not built yet.
+- Frontend in `frontend/` (React, TypeScript, Vite, Tailwind, Plotly loaded
+  lazily). Types are generated from the API schema; drift tests on both sides.
+- `uv run statarb dashboard` serves it on http://127.0.0.1:8000.
+- Data provenance: every snapshot is shown with its source and download date,
+  and Yahoo snapshots are marked as downloaded before the terms check. The
+  "any two tickers" flow (commit 7) will offer cached tickers only.
+- Dependencies added: fastapi (MIT) and 259 npm packages (docs/THIRD_PARTY.md);
+  four dev-only npm packages under BlueOak-1.0.0 and CC-BY-4.0 are outside the
+  named licence list and wait for the author's decision.
+- No analysis, demo or backtest was run; the trial log is unchanged at 97
+  lines.
 
 ## Standing rules added during Phase 3
 
@@ -364,7 +386,7 @@ This gate is an in-sample result on synthetic data. It says nothing about real p
 | 3. Backtester | gate passed 2026-11-23 |
 | 3b. Universe strategy | not started |
 | 4. Agent | not started |
-| 4b. Dashboard | not started |
+| 4b. Dashboard | in progress (commits 1 to 5 of 14, 2026-11-25) |
 | 5. Experiment | not started |
 | 6. Paper trading, README, paper | not started |
 
