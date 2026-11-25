@@ -1,0 +1,2690 @@
+{
+  "$defs": {
+    "BasketEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "screen": {
+          "$ref": "#/$defs/ScreenStatus"
+        },
+        "tickers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tickers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tickers",
+        "screen"
+      ],
+      "title": "BasketEntry",
+      "type": "object"
+    },
+    "ConfigFile": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "sha256",
+        "text"
+      ],
+      "title": "ConfigFile",
+      "type": "object"
+    },
+    "Configs": {
+      "additionalProperties": false,
+      "properties": {
+        "configs": {
+          "items": {
+            "$ref": "#/$defs/ConfigFile"
+          },
+          "title": "Configs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "configs"
+      ],
+      "title": "Configs",
+      "type": "object"
+    },
+    "DataProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "cached_tickers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cached Tickers",
+          "type": "array"
+        },
+        "snapshots": {
+          "items": {
+            "$ref": "#/$defs/Snapshot"
+          },
+          "title": "Snapshots",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SourceInfoModel"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sources",
+        "snapshots",
+        "cached_tickers"
+      ],
+      "title": "DataProvenance",
+      "type": "object"
+    },
+    "DeflatedSharpe": {
+      "additionalProperties": false,
+      "properties": {
+        "dsr": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dsr"
+        },
+        "expected_max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Max"
+        },
+        "n_defined": {
+          "title": "N Defined",
+          "type": "integer"
+        },
+        "n_trials": {
+          "title": "N Trials",
+          "type": "integer"
+        },
+        "sharpe_variance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sharpe Variance"
+        }
+      },
+      "required": [
+        "dsr",
+        "expected_max",
+        "n_defined",
+        "n_trials",
+        "sharpe_variance"
+      ],
+      "title": "DeflatedSharpe",
+      "type": "object"
+    },
+    "EquitySeries": {
+      "additionalProperties": false,
+      "description": "Equity and drawdown of one span, as fractions of the fixed capital.",
+      "properties": {
+        "cost_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cost Bps"
+        },
+        "dates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dates",
+          "type": "array"
+        },
+        "drawdown": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Drawdown",
+          "type": "array"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        },
+        "equity": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Equity",
+          "type": "array"
+        },
+        "gross_equity": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Gross Equity",
+          "type": "array"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "span": {
+          "title": "Span",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        },
+        "stored_max_drawdown": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stored Max Drawdown"
+        },
+        "stored_total_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stored Total Return"
+        }
+      },
+      "required": [
+        "run_id",
+        "span",
+        "start",
+        "end",
+        "cost_bps",
+        "dates",
+        "equity",
+        "gross_equity",
+        "drawdown",
+        "stored_max_drawdown",
+        "stored_total_return",
+        "provenance"
+      ],
+      "title": "EquitySeries",
+      "type": "object"
+    },
+    "ErrorBody": {
+      "additionalProperties": false,
+      "description": "Every error response: a plain message with the endpoint and run id.",
+      "properties": {
+        "endpoint": {
+          "title": "Endpoint",
+          "type": "string"
+        },
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        }
+      },
+      "required": [
+        "error",
+        "message",
+        "endpoint"
+      ],
+      "title": "ErrorBody",
+      "type": "object"
+    },
+    "Gate": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "gate": {
+          "title": "Gate",
+          "type": "string"
+        },
+        "passed_on": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Passed On"
+        },
+        "phase": {
+          "title": "Phase",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "not_started",
+            "in_progress"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "phase",
+        "title",
+        "gate",
+        "status",
+        "passed_on",
+        "evidence"
+      ],
+      "title": "Gate",
+      "type": "object"
+    },
+    "Gates": {
+      "additionalProperties": false,
+      "properties": {
+        "gates": {
+          "items": {
+            "$ref": "#/$defs/Gate"
+          },
+          "title": "Gates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "gates"
+      ],
+      "title": "Gates",
+      "type": "object"
+    },
+    "Headline": {
+      "additionalProperties": false,
+      "description": "The strategy as stated in advance (backtest.runner, the summary).",
+      "properties": {
+        "candidate_states": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Candidate States",
+          "type": "object"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/HeadlineCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "complete": {
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "deflated_sharpe": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/DeflatedSharpe"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Deflated Sharpe"
+        },
+        "duplicate_run_ids_ignored": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Duplicate Run Ids Ignored",
+          "type": "array"
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/SpanMetrics"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Metrics"
+        },
+        "n_candidates": {
+          "title": "N Candidates",
+          "type": "integer"
+        },
+        "n_runs": {
+          "title": "N Runs",
+          "type": "integer"
+        },
+        "out_of_sample_span": {
+          "title": "Out Of Sample Span",
+          "type": "string"
+        },
+        "run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Run Ids",
+          "type": "array"
+        },
+        "spans_in_sample_for_screen": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Spans In Sample For Screen",
+          "type": "array"
+        },
+        "statement": {
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "complete",
+        "n_candidates",
+        "n_runs",
+        "candidate_states",
+        "candidates",
+        "run_ids",
+        "duplicate_run_ids_ignored",
+        "out_of_sample_span",
+        "spans_in_sample_for_screen",
+        "metrics",
+        "deflated_sharpe"
+      ],
+      "title": "Headline",
+      "type": "object"
+    },
+    "HeadlineCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Run Id"
+        },
+        "screen_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Screen Status"
+        },
+        "screen_status_at_run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Screen Status At Run"
+        },
+        "state": {
+          "title": "State",
+          "type": "string"
+        },
+        "tickers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tickers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "tickers",
+        "state",
+        "run_id",
+        "reason"
+      ],
+      "title": "HeadlineCandidate",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "description": "State of the project when the page loads.",
+      "properties": {
+        "data_first_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Data First Date"
+        },
+        "data_last_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Data Last Date"
+        },
+        "downloads_enabled": {
+          "title": "Downloads Enabled",
+          "type": "boolean"
+        },
+        "head_commit": {
+          "title": "Head Commit",
+          "type": "string"
+        },
+        "head_dirty": {
+          "title": "Head Dirty",
+          "type": "boolean"
+        },
+        "latest_summary_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Summary Id"
+        },
+        "latest_summary_trials_counted": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Summary Trials Counted"
+        },
+        "paper_trading_only": {
+          "title": "Paper Trading Only",
+          "type": "boolean"
+        },
+        "project": {
+          "title": "Project",
+          "type": "string"
+        },
+        "study": {
+          "$ref": "#/$defs/StudyPeriods"
+        },
+        "summary_stale": {
+          "title": "Summary Stale",
+          "type": "boolean"
+        },
+        "trials_counted": {
+          "title": "Trials Counted",
+          "type": "integer"
+        },
+        "trials_in_log": {
+          "title": "Trials In Log",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "project",
+        "head_commit",
+        "head_dirty",
+        "study",
+        "trials_in_log",
+        "trials_counted",
+        "latest_summary_id",
+        "latest_summary_trials_counted",
+        "summary_stale",
+        "data_first_date",
+        "data_last_date",
+        "downloads_enabled",
+        "paper_trading_only"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "OpenAtEnd": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_cost_not_charged_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exit Cost Not Charged Return"
+        },
+        "open": {
+          "title": "Open",
+          "type": "boolean"
+        },
+        "unrealised_net_pnl_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unrealised Net Pnl Return"
+        }
+      },
+      "required": [
+        "open",
+        "exit_cost_not_charged_return",
+        "unrealised_net_pnl_return"
+      ],
+      "title": "OpenAtEnd",
+      "type": "object"
+    },
+    "PairEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "a": {
+          "title": "A",
+          "type": "string"
+        },
+        "b": {
+          "title": "B",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "screen": {
+          "$ref": "#/$defs/ScreenStatus"
+        }
+      },
+      "required": [
+        "a",
+        "b",
+        "label",
+        "screen"
+      ],
+      "title": "PairEntry",
+      "type": "object"
+    },
+    "Pairs": {
+      "additionalProperties": false,
+      "properties": {
+        "basket": {
+          "$ref": "#/$defs/BasketEntry"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/PairEntry"
+          },
+          "title": "Pairs",
+          "type": "array"
+        },
+        "synthetic": {
+          "$ref": "#/$defs/SyntheticEntry"
+        }
+      },
+      "required": [
+        "pairs",
+        "basket",
+        "synthetic"
+      ],
+      "title": "Pairs",
+      "type": "object"
+    },
+    "Period": {
+      "additionalProperties": false,
+      "properties": {
+        "asof": {
+          "title": "Asof",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "start",
+        "asof"
+      ],
+      "title": "Period",
+      "type": "object"
+    },
+    "PlaceboRank": {
+      "additionalProperties": false,
+      "properties": {
+        "n_placebos": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "N Placebos"
+        },
+        "placebo_mean": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Placebo Mean"
+        },
+        "real_sharpe": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Real Sharpe"
+        },
+        "share_at_least": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Share At Least"
+        }
+      },
+      "required": [
+        "real_sharpe",
+        "n_placebos",
+        "placebo_mean",
+        "share_at_least"
+      ],
+      "title": "PlaceboRank",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Which code, configs and data produced a result.",
+      "properties": {
+        "code_commit": {
+          "title": "Code Commit",
+          "type": "string"
+        },
+        "code_dirty": {
+          "title": "Code Dirty",
+          "type": "boolean"
+        },
+        "config_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Config Hashes",
+          "type": "object"
+        },
+        "snapshot_ids": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snapshot Ids"
+        },
+        "trial_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trial Id"
+        }
+      },
+      "required": [
+        "code_commit",
+        "code_dirty",
+        "config_hashes"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "RunCompare": {
+      "additionalProperties": false,
+      "properties": {
+        "a": {
+          "$ref": "#/$defs/RunManifest"
+        },
+        "b": {
+          "$ref": "#/$defs/RunManifest"
+        }
+      },
+      "required": [
+        "a",
+        "b"
+      ],
+      "title": "RunCompare",
+      "type": "object"
+    },
+    "RunList": {
+      "additionalProperties": false,
+      "properties": {
+        "runs": {
+          "items": {
+            "$ref": "#/$defs/RunListItem"
+          },
+          "title": "Runs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "runs"
+      ],
+      "title": "RunList",
+      "type": "object"
+    },
+    "RunListItem": {
+      "additionalProperties": false,
+      "properties": {
+        "code_commit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Code Commit"
+        },
+        "code_dirty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Code Dirty"
+        },
+        "control": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Control"
+        },
+        "cost_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cost Bps"
+        },
+        "created_at_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Created At Utc"
+        },
+        "data_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Data Source"
+        },
+        "hedge": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hedge"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Label"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "stale": {
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "strategy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Strategy"
+        },
+        "tickers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tickers"
+        }
+      },
+      "required": [
+        "run_id",
+        "kind",
+        "label",
+        "tickers",
+        "strategy",
+        "hedge",
+        "cost_bps",
+        "control",
+        "data_source",
+        "created_at_utc",
+        "code_commit",
+        "code_dirty",
+        "stale"
+      ],
+      "title": "RunListItem",
+      "type": "object"
+    },
+    "RunManifest": {
+      "additionalProperties": false,
+      "description": "run.json of a backtest, control batch or summary.\n\nFields that a kind does not have are null. A test checks that every key\nthe runner writes is a field here, so nothing is dropped silently.",
+      "properties": {
+        "control": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control"
+        },
+        "cost_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Bps"
+        },
+        "created_at_utc": {
+          "title": "Created At Utc",
+          "type": "string"
+        },
+        "data_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Source"
+        },
+        "default_cost_bps": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Cost Bps"
+        },
+        "default_hedge": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Hedge"
+        },
+        "deflated_sharpe": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/DeflatedSharpe"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deflated Sharpe"
+        },
+        "downloaded": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Downloaded"
+        },
+        "exploratory_screened_run_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exploratory Screened Run Ids"
+        },
+        "files": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TableFile"
+          },
+          "title": "Files",
+          "type": "object"
+        },
+        "first_signal_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Signal Date"
+        },
+        "flags": {
+          "anyOf": [
+            {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Flags"
+        },
+        "headline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Headline"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "hedge": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hedge"
+        },
+        "kind": {
+          "enum": [
+            "backtest",
+            "control_batch",
+            "summary"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/SpanMetrics"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metrics"
+        },
+        "n_backtests_counted": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Backtests Counted"
+        },
+        "n_trials_counted": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Trials Counted"
+        },
+        "n_trials_in_log": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Trials In Log"
+        },
+        "n_windows": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "N Windows"
+        },
+        "open_at_end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenAtEnd"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "out_of_sample_span": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Out Of Sample Span"
+        },
+        "period": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Period"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        },
+        "rank": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/PlaceboRank"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rank"
+        },
+        "real_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Real Run Id"
+        },
+        "real_sharpe": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Real Sharpe"
+        },
+        "rows": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/SummaryRow"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rows"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "screen": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScreenStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "screened_not_backtested": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Screened Not Backtested"
+        },
+        "settings": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Settings"
+        },
+        "spans_in_sample_for_screen": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spans In Sample For Screen"
+        },
+        "stale": {
+          "default": false,
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "strategy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Strategy"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summary"
+        },
+        "survivorship_bias": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Survivorship Bias"
+        },
+        "tickers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tickers"
+        },
+        "unlisted_case_study_run_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unlisted Case Study Run Ids"
+        }
+      },
+      "required": [
+        "run_id",
+        "kind",
+        "schema_version",
+        "created_at_utc",
+        "provenance",
+        "files"
+      ],
+      "title": "RunManifest",
+      "type": "object"
+    },
+    "ScreenCriterion": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "passed",
+        "detail"
+      ],
+      "title": "ScreenCriterion",
+      "type": "object"
+    },
+    "ScreenStatus": {
+      "additionalProperties": false,
+      "description": "Latest formation-period screen result of a ticker set.",
+      "properties": {
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/ScreenCriterion"
+          },
+          "title": "Criteria",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "refused",
+            "error",
+            "not_analysed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "trial_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Trial Id"
+        }
+      },
+      "required": [
+        "status",
+        "trial_id",
+        "criteria",
+        "reason"
+      ],
+      "title": "ScreenStatus",
+      "type": "object"
+    },
+    "Snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "downloaded_before_terms_check": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Downloaded Before Terms Check"
+        },
+        "file_present": {
+          "title": "File Present",
+          "type": "boolean"
+        },
+        "first_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "First Date"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "last_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Date"
+        },
+        "n_rows": {
+          "title": "N Rows",
+          "type": "integer"
+        },
+        "retrieved_at_utc": {
+          "title": "Retrieved At Utc",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "source",
+        "key",
+        "retrieved_at_utc",
+        "first_date",
+        "last_date",
+        "n_rows",
+        "url",
+        "file_present",
+        "downloaded_before_terms_check"
+      ],
+      "title": "Snapshot",
+      "type": "object"
+    },
+    "SourceInfoModel": {
+      "additionalProperties": false,
+      "properties": {
+        "downloads_enabled": {
+          "title": "Downloads Enabled",
+          "type": "boolean"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "reference": {
+          "title": "Reference",
+          "type": "string"
+        },
+        "terms_checked_on": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Terms Checked On"
+        },
+        "terms_note": {
+          "title": "Terms Note",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "title",
+        "downloads_enabled",
+        "terms_checked_on",
+        "terms_note",
+        "reference"
+      ],
+      "title": "SourceInfoModel",
+      "type": "object"
+    },
+    "SpanMetrics": {
+      "additionalProperties": false,
+      "description": "Metrics of one span, as backtest.summary.span_metrics stores them.",
+      "properties": {
+        "annual_turnover": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Annual Turnover"
+        },
+        "annualised_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Annualised Return"
+        },
+        "annualised_volatility": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Annualised Volatility"
+        },
+        "average_abs_net_exposure": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Average Abs Net Exposure"
+        },
+        "average_gross_exposure": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Average Gross Exposure"
+        },
+        "average_holding_bars": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Average Holding Bars"
+        },
+        "beta_to_benchmark": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Beta To Benchmark"
+        },
+        "borrow_cost_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Borrow Cost Return"
+        },
+        "calmar": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Calmar"
+        },
+        "cost_drag": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cost Drag"
+        },
+        "distribution_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Distribution Return"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        },
+        "exit_reasons": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Exit Reasons",
+          "type": "object"
+        },
+        "gross_sharpe": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Gross Sharpe"
+        },
+        "hit_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hit Rate"
+        },
+        "kurtosis": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Kurtosis"
+        },
+        "max_drawdown": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Drawdown"
+        },
+        "n_days": {
+          "title": "N Days",
+          "type": "integer"
+        },
+        "n_trades": {
+          "title": "N Trades",
+          "type": "integer"
+        },
+        "price_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Price Return"
+        },
+        "psr_zero": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Psr Zero"
+        },
+        "share_in_market": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Share In Market"
+        },
+        "sharpe": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sharpe"
+        },
+        "sharpe_per_period": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sharpe Per Period"
+        },
+        "skewness": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Skewness"
+        },
+        "sortino": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Sortino"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        },
+        "total_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Total Return"
+        },
+        "trade_cost_return": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Trade Cost Return"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "n_days",
+        "total_return",
+        "annualised_return",
+        "annualised_volatility",
+        "sharpe",
+        "sharpe_per_period",
+        "gross_sharpe",
+        "sortino",
+        "max_drawdown",
+        "calmar",
+        "skewness",
+        "kurtosis",
+        "psr_zero",
+        "n_trades",
+        "hit_rate",
+        "average_holding_bars",
+        "annual_turnover",
+        "cost_drag",
+        "beta_to_benchmark",
+        "share_in_market",
+        "average_gross_exposure",
+        "average_abs_net_exposure",
+        "price_return",
+        "distribution_return",
+        "trade_cost_return",
+        "borrow_cost_return",
+        "exit_reasons"
+      ],
+      "title": "SpanMetrics",
+      "type": "object"
+    },
+    "StudyPeriods": {
+      "additionalProperties": false,
+      "properties": {
+        "formation_end": {
+          "title": "Formation End",
+          "type": "string"
+        },
+        "formation_start": {
+          "title": "Formation Start",
+          "type": "string"
+        },
+        "test_period_locked": {
+          "title": "Test Period Locked",
+          "type": "boolean"
+        },
+        "test_start": {
+          "title": "Test Start",
+          "type": "string"
+        },
+        "validation_end": {
+          "title": "Validation End",
+          "type": "string"
+        },
+        "validation_start": {
+          "title": "Validation Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "formation_start",
+        "formation_end",
+        "validation_start",
+        "validation_end",
+        "test_start",
+        "test_period_locked"
+      ],
+      "title": "StudyPeriods",
+      "type": "object"
+    },
+    "SummaryRow": {
+      "additionalProperties": false,
+      "properties": {
+        "cost_bps": {
+          "title": "Cost Bps",
+          "type": "number"
+        },
+        "data_source": {
+          "title": "Data Source",
+          "type": "string"
+        },
+        "deflated_sharpe": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/DeflatedSharpe"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Deflated Sharpe"
+        },
+        "hedge": {
+          "title": "Hedge",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SpanMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "open_at_end": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpenAtEnd"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "screen_status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Screen Status"
+        },
+        "screen_status_at_run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Screen Status At Run"
+        },
+        "strategy": {
+          "title": "Strategy",
+          "type": "string"
+        },
+        "tickers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tickers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "run_id",
+        "tickers",
+        "label",
+        "strategy",
+        "hedge",
+        "cost_bps",
+        "data_source",
+        "screen_status",
+        "screen_status_at_run",
+        "metrics",
+        "deflated_sharpe",
+        "open_at_end"
+      ],
+      "title": "SummaryRow",
+      "type": "object"
+    },
+    "SyntheticEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "a": {
+          "title": "A",
+          "type": "string"
+        },
+        "b": {
+          "title": "B",
+          "type": "string"
+        },
+        "beta": {
+          "title": "Beta",
+          "type": "number"
+        },
+        "half_life": {
+          "title": "Half Life",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "screen": {
+          "$ref": "#/$defs/ScreenStatus"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "a",
+        "b",
+        "label",
+        "seed",
+        "beta",
+        "half_life",
+        "screen"
+      ],
+      "title": "SyntheticEntry",
+      "type": "object"
+    },
+    "Table": {
+      "additionalProperties": false,
+      "description": "One stored table as columns. Dates are ISO strings; NaN is null.",
+      "properties": {
+        "columns": {
+          "additionalProperties": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "title": "Columns",
+          "type": "object"
+        },
+        "index": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Index",
+          "type": "array"
+        },
+        "index_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Index Name"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "name",
+        "sha256",
+        "index_name",
+        "index",
+        "columns"
+      ],
+      "title": "Table",
+      "type": "object"
+    },
+    "TableFile": {
+      "additionalProperties": false,
+      "properties": {
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Columns",
+          "type": "array"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "rows": {
+          "title": "Rows",
+          "type": "integer"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "sha256",
+        "rows",
+        "columns"
+      ],
+      "title": "TableFile",
+      "type": "object"
+    },
+    "TrialItem": {
+      "additionalProperties": false,
+      "description": "One line of the trial log, with its 1-based line number.",
+      "properties": {
+        "code_commit": {
+          "title": "Code Commit",
+          "type": "string"
+        },
+        "code_dirty": {
+          "title": "Code Dirty",
+          "type": "boolean"
+        },
+        "config_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Config Hashes",
+          "type": "object"
+        },
+        "counted": {
+          "title": "Counted",
+          "type": "boolean"
+        },
+        "data_source": {
+          "title": "Data Source",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Label"
+        },
+        "line": {
+          "title": "Line",
+          "type": "integer"
+        },
+        "outcome": {
+          "title": "Outcome",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        },
+        "period": {
+          "additionalProperties": true,
+          "title": "Period",
+          "type": "object"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "recorded_at_utc": {
+          "title": "Recorded At Utc",
+          "type": "string"
+        },
+        "results": {
+          "additionalProperties": true,
+          "title": "Results",
+          "type": "object"
+        },
+        "schema_version": {
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "snapshot_ids": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Snapshot Ids",
+          "type": "object"
+        },
+        "survivorship_bias": {
+          "title": "Survivorship Bias",
+          "type": "boolean"
+        },
+        "test_period_touched": {
+          "title": "Test Period Touched",
+          "type": "boolean"
+        },
+        "tickers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tickers",
+          "type": "array"
+        },
+        "trial_id": {
+          "title": "Trial Id",
+          "type": "string"
+        },
+        "unlock": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unlock"
+        }
+      },
+      "required": [
+        "line",
+        "trial_id",
+        "recorded_at_utc",
+        "kind",
+        "label",
+        "tickers",
+        "period",
+        "data_source",
+        "survivorship_bias",
+        "snapshot_ids",
+        "config_hashes",
+        "code_commit",
+        "code_dirty",
+        "test_period_touched",
+        "unlock",
+        "outcome",
+        "reason",
+        "parameters",
+        "results",
+        "counted",
+        "schema_version"
+      ],
+      "title": "TrialItem",
+      "type": "object"
+    },
+    "TrialPage": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/TrialItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "limit": {
+          "title": "Limit",
+          "type": "integer"
+        },
+        "offset": {
+          "title": "Offset",
+          "type": "integer"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "offset",
+        "limit",
+        "items"
+      ],
+      "title": "TrialPage",
+      "type": "object"
+    },
+    "TrialStats": {
+      "additionalProperties": false,
+      "properties": {
+        "by_kind": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "By Kind",
+          "type": "object"
+        },
+        "by_label": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "By Label",
+          "type": "object"
+        },
+        "by_outcome": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "By Outcome",
+          "type": "object"
+        },
+        "counting_rule": {
+          "title": "Counting Rule",
+          "type": "string"
+        },
+        "dirty_lines": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Dirty Lines",
+          "type": "array"
+        },
+        "n_backtests_counted": {
+          "title": "N Backtests Counted",
+          "type": "integer"
+        },
+        "n_counted": {
+          "title": "N Counted",
+          "type": "integer"
+        },
+        "n_lines": {
+          "title": "N Lines",
+          "type": "integer"
+        },
+        "n_screened_not_backtested": {
+          "title": "N Screened Not Backtested",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "n_lines",
+        "by_kind",
+        "by_label",
+        "by_outcome",
+        "n_backtests_counted",
+        "n_screened_not_backtested",
+        "n_counted",
+        "dirty_lines",
+        "counting_rule"
+      ],
+      "title": "TrialStats",
+      "type": "object"
+    }
+  },
+  "title": "statarb-agent dashboard API"
+}
