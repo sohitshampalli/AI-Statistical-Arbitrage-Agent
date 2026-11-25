@@ -39,7 +39,8 @@ test("provenance hover and drawer", async ({ page }) => {
   await expect(page.getByRole("tooltip")).toBeVisible();
   const box = await section.boundingBox();
   if (box) {
-    await page.screenshot({ path: `${OUT}/gallery-hover-1440.png`, fullPage: true, clip: { x: 0, y: box.y - 24, width: 1440, height: 420 } });
+    // boundingBox is in viewport coordinates, so clip the viewport, not the full page
+    await page.screenshot({ path: `${OUT}/gallery-hover-1440.png`, clip: { x: 0, y: Math.max(0, box.y - 24), width: 1440, height: 540 } });
   }
   await kpi.click();
   const drawer = page.getByRole("dialog", { name: /Validation net Sharpe/ });
