@@ -1,0 +1,177 @@
+/*
+ * Design tokens (docs/DASHBOARD_SPEC.md, section 4). Every colour, size and
+ * timing a component uses comes from here; components never hard-code them.
+ * Tailwind utilities are generated from the same variables (@theme inline).
+ */
+@import "tailwindcss";
+
+:root {
+  /* colour, dark theme only */
+  --bg-0: #05070d;
+  --bg-1: #0a0f1c;
+  --bg-2: #101728;
+  --surface-glass: rgba(255, 255, 255, 0.04);
+  --surface-glass-hover: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text-primary: #e6eaf2;
+  --text-secondary: #8b93a7;
+  --text-muted: #5b6377;
+  --accent: #4c8dff;
+  --accent-glow: rgba(76, 141, 255, 0.35);
+  --positive: #34c58e;
+  --negative: #e5484d;
+  --alert: #e8632b;
+  --gridline: rgba(255, 255, 255, 0.06);
+
+  /* type: family */
+  --font-text: "Inter", system-ui, sans-serif;
+  --font-number: "JetBrains Mono", ui-monospace, monospace;
+
+  /* spacing scale, 4 px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* radii */
+  --radius-card: 16px;
+  --radius-control: 10px;
+  --radius-pill: 999px;
+
+  /* layout */
+  --page-max: 1440px;
+  --gutter: 24px;
+
+  /* glass */
+  --glass-blur: 16px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* motion */
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-page: 400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-glass: var(--surface-glass);
+  --color-glass-hover: var(--surface-glass-hover);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-alert: var(--alert);
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-number);
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+}
+
+/* Type scale (px / weight): display 40/300, h1 28/500, h2 20/500,
+   h3 16/500, body 14/400, label 12/500 uppercase 0.06em,
+   KPI 36/400 tabular, table number 13/400 tabular. */
+@utility t-display {
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+@utility t-h1 {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 500;
+}
+@utility t-h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+}
+@utility t-h3 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+@utility t-body {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+@utility t-label {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+@utility t-kpi {
+  font-family: var(--font-number);
+  font-size: 36px;
+  line-height: 44px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+@utility t-num {
+  font-family: var(--font-number);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--bg-0);
+    background-image: radial-gradient(
+      ellipse 70% 45% at 50% -8%,
+      rgba(76, 141, 255, 0.12),
+      transparent 70%
+    );
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-text);
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: var(--accent-glow);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

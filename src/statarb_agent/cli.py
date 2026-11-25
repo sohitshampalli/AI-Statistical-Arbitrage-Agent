@@ -1,4 +1,5 @@
-"""Command line: fetch, analyse, demo, backtest, backtest-demo, runs, summarise.
+"""Command line: fetch, analyse, demo, backtest, backtest-demo, runs, summarise,
+dashboard.
 
 The commands only call tested code (analysis.Analyser, backtest.runner) and
 print what it returned. No number is computed here.
@@ -15,6 +16,8 @@ print what it returned. No number is computed here.
 - `statarb backtest-demo` runs every pre-stated backtest and control once.
 - `statarb runs` lists the stored runs; `statarb summarise` writes a summary of
   them with Deflated Sharpe ratios at the current trial count.
+- `statarb dashboard` serves the local dashboard on 127.0.0.1 (`--dev` for the
+  Vite dev server).
 
 Every analysis and every backtest adds a line to the trial log, so do not
 re-run one just to look at a result: `statarb runs` reads the stored results.
@@ -428,6 +431,25 @@ def summarise() -> None:
     )
     typer.echo(manifest["headline"]["statement"])
     typer.echo(f"Summary: {summary.run_id}")
+
+
+@app.command()
+def dashboard(
+    port: Annotated[int, typer.Option(help="Port on 127.0.0.1.")] = 8000,
+    dev: Annotated[
+        bool, typer.Option("--dev", help="Run the Vite dev server with hot reload.")
+    ] = False,
+    open_browser: Annotated[
+        bool, typer.Option("--open/--no-open", help="Open the browser.")
+    ] = True,
+) -> None:
+    """Serve the local dashboard on 127.0.0.1 and open it. Adds no trial."""
+    from statarb_agent.api.server import DashboardError, run_dashboard
+
+    try:
+        run_dashboard(_state["root"], port=port, dev=dev, open_browser=open_browser)
+    except DashboardError as exc:
+        raise _fail(str(exc)) from exc
 
 
 def main() -> None:

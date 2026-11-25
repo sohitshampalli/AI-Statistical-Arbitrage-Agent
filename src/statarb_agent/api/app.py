@@ -26,6 +26,7 @@ import yaml
 from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -64,8 +65,10 @@ class ApiError(Exception):
         self.run_id = run_id
 
 
-def allowed_hosts(port: int) -> frozenset[str]:
-    return frozenset({f"127.0.0.1:{port}", f"localhost:{port}"})
+def allowed_hosts(port: int, *, dev: bool = False) -> frozenset[str]:
+    # In dev mode the Vite server proxies /api and keeps its own Host header.
+    ports = [port, DEV_PORT] if dev else [port]
+    return frozenset(f"{host}:{p}" for p in ports for host in ("127.0.0.1", "localhost"))
 
 
 def allowed_origins(port: int, *, dev: bool) -> frozenset[str]:
@@ -102,6 +105,34 @@ class LocalOnlyMiddleware:
         body = s.ErrorBody(error="forbidden", message=problem, endpoint=scope["path"])
         response = JSONResponse(body.model_dump(), status_code=403)
         await response(scope, receive, send)
+
+
+SECURITY_HEADERS: Final = (
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"referrer-policy", b"no-referrer"),
+    (b"cache-control", b"no-store"),
+)
+
+
+class SecurityHeadersMiddleware:
+    """Add headers that stop framing, sniffing, referrers and caching."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: dict[str, Any]) -> None:
+            if message["type"] == "http.response.start":
+                message = {**message, "headers": [*message.get("headers", []),
+                                                  *SECURITY_HEADERS]}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
 
 
 # Conversions --------------------------------------------------------------
@@ -153,16 +184,23 @@ def _floats(values: Any) -> list[float | None]:
 
 
 def create_app(
-    root: Path, *, port: int = DEFAULT_PORT, dev: bool = False
+    root: Path, *, port: int = DEFAULT_PORT, dev: bool = False,
+    static_dir: Path | None = None,
 ) -> FastAPI:
-    """The dashboard API over the project folder `root`."""
+    """The dashboard API over the project folder `root`.
+
+    With `static_dir` (the built frontend, frontend/dist) the app also serves
+    the dashboard itself at /. API routes take precedence.
+    """
     root = Path(root)
     store = ResultStore(root)
     app = FastAPI(
         title="statarb-agent dashboard", docs_url=None, redoc_url=None, openapi_url=None
     )
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
-        LocalOnlyMiddleware, hosts=allowed_hosts(port), origins=allowed_origins(port, dev=dev)
+        LocalOnlyMiddleware, hosts=allowed_hosts(port, dev=dev),
+        origins=allowed_origins(port, dev=dev),
     )
     app.state.store = store
     app.state.root = root
@@ -192,6 +230,10 @@ def create_app(
         return JSONResponse(body.model_dump(), status_code=exc.status_code)
 
     app.include_router(build_router(store, root))
+    if static_dir is not None:
+        if not (Path(static_dir) / "index.html").is_file():
+            raise FileNotFoundError(f"{static_dir} has no index.html; build the frontend")
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
     return app
 
 
