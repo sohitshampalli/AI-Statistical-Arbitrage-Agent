@@ -140,7 +140,8 @@ Dashboard commit 1 waits until the author chooses a price source.
 
 Decisions of 2026-11-23:
 - Licences allowed: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, OFL for fonts only, MPL
-  2.0 only for unmodified dev tools. Inter and JetBrains Mono (OFL) and
+  2.0 for dependencies used unmodified, at runtime or in development (widened
+  2026-11-23; the full rule is in the brief). Inter and JetBrains Mono (OFL) and
   lucide-react (ISC) approved. Every package and data source in
   docs/THIRD_PARTY.md.
 - Installs approved: `uv add fastapi`, the planned npm packages, Playwright's

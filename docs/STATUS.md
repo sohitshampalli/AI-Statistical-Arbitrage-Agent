@@ -6,8 +6,8 @@ Gates are defined in docs/PROJECT_BRIEF.md.
 ## Current phase: 3 done (gate passed 2026-11-23); next is 4b, the dashboard
 
 Phase 3 (sprint milestone B) closed on 2026-11-23. Milestone C, the dashboard,
-waits for the user's approval of its plan. Notes on each Phase 3 piece are at the
-end of this file.
+has its plan approved (2026-11-23; docs/SPRINT.md) and commit 0 done. Notes on
+each Phase 3 piece are at the end of this file.
 
 ## Standing rules added during Phase 3
 
@@ -206,7 +206,6 @@ period is ever unlocked:
 None of this matters while the test period stays locked: the backtester's as-of
 date cannot pass 2022-01-01 and no 2022 row is ever stored.
 
-## Phase 2 steps
 ## Phase 2 steps
 
 Gate: all estimates use only data before their as-of date.
