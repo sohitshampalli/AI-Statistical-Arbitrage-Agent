@@ -53,8 +53,17 @@ job) fail on an uncached ticker and log nothing. The 12 snapshots from
 2026-11-08 and 2026-11-10 and every result recorded from them are unchanged and
 documented as produced with Yahoo data before the terms check. The live network
 test is skipped. A replacement source was evaluated on 2026-11-23 (table in
-docs/THIRD_PARTY.md): none of the sources read meets every requirement. Until
-the author chooses one, a fresh clone cannot reproduce the real-data results.
+docs/THIRD_PARTY.md): none of the sources read meets every requirement. A fresh
+clone cannot reproduce the real-data results.
+
+Decided 2026-11-25: stay on the 12 Yahoo snapshots with downloads off; paid
+EODHD rejected (it needs a payment method); the unloaded sources are not
+retried for now. The author is requesting CRSP access through WRDS from the
+University of Amsterdam library. If granted, CRSP (licensed for academic
+research, includes delisted stocks) becomes the research data source through
+the existing source interface. Nothing changes until the author confirms
+access. The dashboard offers only cached tickers and shows the data provenance
+(source, snapshot date, downloaded before the terms check).
 
 ## Exceptions to the no-loosening rule
 

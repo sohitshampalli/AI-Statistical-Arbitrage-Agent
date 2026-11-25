@@ -136,7 +136,8 @@ Acceptance:
 ## Milestone C. Dashboard (Phase 4b), all 14 sections of docs/DASHBOARD_SPEC.md
 
 Status: plan approved 2026-11-23 with the user's decisions below; commit 0 done.
-Dashboard commit 1 waits until the author chooses a price source.
+Price source decided 2026-11-25 (stay on the snapshots); commits 1 onward in
+progress.
 
 Decisions of 2026-11-23:
 - Licences allowed: MIT, BSD, Apache 2.0, ISC, PSF, Zlib, OFL for fonts only, MPL
@@ -297,6 +298,15 @@ offline mock mode for tests. No call to the paid Claude API.
   docs/THIRD_PARTY.md. No source read meets every requirement: Tiingo needs a
   card and forbids persistent storage, Alpaca's free history starts in 2016,
   EODHD's free tier has one year. Stopped for the author's choice of source.
+- 2026-11-25. The author's decisions: stay on the 12 Yahoo snapshots with
+  downloads off; paid EODHD rejected; CRSP access through WRDS requested from the
+  University of Amsterdam library (nothing changes until access is confirmed).
+  Three stale doc lines fixed (3bb25d5). Dashboard commit 1 may start, with the
+  adjustments: the "any two tickers" flow offers only cached tickers and explains
+  why for any other; the download path stays behind the source interface and
+  the `YFINANCE_DOWNLOADS_ENABLED` switch; data provenance (source, snapshot
+  date, "downloaded before the terms check") in the provenance drawer and on the
+  Methodology page.
 
 ## Reviews
 

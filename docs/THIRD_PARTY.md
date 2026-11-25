@@ -245,6 +245,7 @@ locally and is not published.
 | SEC EDGAR | planned (Phase 4 to 5) | free: "Anyone can access and download this information for free." | https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data and https://www.sec.gov/privacy | "Current max request rate: 10 requests/second." "Please declare your user agent in request headers". "Information presented on sec.gov is considered public information and may be copied or further distributed". "Please consider appropriate citation to the SEC as the source." "The SEC does not allow botnets or automated tools to crawl the site." | Planned use complies if requests stay well under 10 per second, a User-Agent with a project contact is declared, only needed filings are fetched (no crawling), and the SEC is cited. |
 | FRED (Federal Reserve Bank of St. Louis) | planned (macro data) | free for personal use: "You are free to access and use FRED® at no cost for your own personal use"; an API key is required; payment method not stated | https://fred.stlouisfed.org/docs/api/terms_of_use.html and https://fred.stlouisfed.org/legal/ | Use "solely for your personal, non-commercial use". Prohibited: "Store, cache, or archive any portion of the FRED® Services or FRED® Content". The application must show: "This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis." Cite the source "and note that it was accessed via FRED". | OPEN. The ban on storing or caching conflicts with the project's snapshot store. Not used yet; to be decided before any FRED download. |
 | Kenneth French Data Library | planned (factor returns, Phase 3b) | no price or payment stated; direct file downloads | https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html | Use, redistribution and citation terms: not stated. Footer: "Copyright Eugene F. Fama and Kenneth R. French". The page names its raw data sources (CRSP, MSCI, Bloomberg). | No restriction stated. The project will cite the library and the Fama and French papers and will not redistribute the files. |
+| CRSP, through WRDS (Wharton Research Data Services) | requested 2026-11-25, not granted | licensed to the university; no payment by the author | not read (access requested through the University of Amsterdam library) | Licensed for academic research; includes delisted stocks, so it removes the survivorship bias of the current data. Terms of the university's licence not read yet. | NOT IN USE. Nothing changes until the author confirms access. If granted, CRSP becomes the research data source, plugged in through the existing source interface in `sources/`, and its licence terms are read and recorded here first. |
 | Alpaca (paper trading and free market data) | planned (Phase 6) | Basic plan "Free"; paper trading "does not require real money"; payment method for paper sign-up not stated | https://alpaca.markets/disclosures and https://docs.alpaca.markets/docs/about-market-data-api | Basic plan: historical API "200 / min"; real-time equities from "the IEX exchange" only. The operative terms (Terms and Conditions PDF and the NYSE and NASDAQ market data agreements linked from the disclosures page) could not be read as text on 2026-11-23. | NOT VERIFIED. Read the Terms and Conditions and the market data agreements before Phase 6. |
 
 ## Replacement price source: evaluation of 2026-11-23
@@ -273,6 +274,21 @@ No source read on 2026-11-23 meets all the requirements. The sources not read
 (Financial Modeling Prep, Nasdaq Data Link, Stooq, and Alpha Vantage's terms)
 are open.
 
+Decided by the author on 2026-11-25:
+- The project stays on the 12 Yahoo snapshots for now, with new downloads off.
+- Paid EODHD is rejected: it would need a payment method, which the data and
+  service policy forbids.
+- The sources whose pages did not load are not retried for now.
+- The author is requesting CRSP access through WRDS from the University of
+  Amsterdam library (row above). If it is granted, CRSP becomes the research
+  data source through the existing source interface. Until the author confirms
+  access, nothing changes.
+- The dashboard's "any two tickers" flow offers only cached tickers; for any
+  other ticker it says that downloads are off pending a licensed data source.
+  Its download path stays behind the source interface and the
+  `YFINANCE_DOWNLOADS_ENABLED` switch, so a licensed source can be added later
+  without changing the dashboard.
+
 ## Open questions for the author
 
 1. Yahoo Finance. Decided 2026-11-23: new downloads are disabled in code
@@ -280,8 +296,9 @@ are open.
    fetch`, `analyse`, `demo`, the backtest commands and the planned dashboard job
    refuse with a message pointing here, before any request is made. The 12
    existing snapshots are kept. The open question is recorded: they were taken
-   with an automated tool before the terms were read. A replacement source is
-   being evaluated (see the source evaluation below).
+   with an automated tool before the terms were read. On 2026-11-25 the author
+   chose to stay on the snapshots and requested CRSP access through WRDS (see
+   the source evaluation above).
 2. FRED. The terms prohibit storing or caching FRED content, which the snapshot
    store does by design.
 3. Alpaca. The market data terms are unread.
