@@ -24,8 +24,10 @@ uvx pip-licenses --python .venv/bin/python --from mixed --format json
 ```
 
 "Group" is runtime if the package is needed by the project's runtime
-dependencies (from `uv export --no-dev`), otherwise dev. 180 packages, the project
-itself excluded (re-read after removing arch).
+dependencies (from `uv export --no-dev`), otherwise dev. 181 packages, the project
+itself excluded (re-read after removing arch; fastapi added on 2026-11-25 for
+the dashboard backend, approved in the milestone C plan, with no other new
+package).
 
 ### Outside the allowed list
 
@@ -79,6 +81,7 @@ file is the MIT text, so it is listed as MIT.
 | exceptiongroup | 1.3.1 | runtime | MIT License | allowed |
 | executing | 2.3.0 | dev | MIT License | allowed |
 | fastjsonschema | 2.22.3 | dev | BSD License | allowed |
+| fastapi | 0.165.0 | runtime | MIT | allowed |
 | fastmcp | 4.1.6 | runtime | Apache-2.0 | allowed |
 | fastmcp-slim | 4.1.6 | runtime | Apache-2.0 | allowed |
 | fonttools | 4.68.0 | runtime | MIT | allowed |
