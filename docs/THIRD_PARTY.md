@@ -229,14 +229,18 @@ file is the MIT text, so it is listed as MIT.
 
 Read on 2026-11-25 from `frontend/package-lock.json` (each entry's `license`
 field) with `npm run licenses` in `frontend/`, which reads the lock file only;
-no licence-checker package was installed. 256 packages: 16 runtime (shipped in
-the dashboard bundle or its fonts) and 240 dev (build, type check, lint, tests),
-13 of them optional platform builds of lightningcss. `motion` is the current
-name of the Framer Motion package (same project and licence).
+no licence-checker package was installed. 259 packages: 16 runtime (shipped in
+the dashboard bundle or its fonts) and 243 dev (build, type check, lint, tests,
+screenshots). 51 entries are optional (platform builds of rolldown, tailwind
+and lightningcss and their WebAssembly helpers); npm installs only those for
+this computer. Playwright (`@playwright/test`, Apache 2.0) was added on
+2026-11-25 for the screenshots; its Chromium build is downloaded to the user's
+Playwright cache, outside the repository. `motion` is the current name of the
+Framer Motion package (same project and licence).
 
 ### Outside the named list
 
-Three dev-only packages, all pulled in by approved tools and none shipped in the
+Four dev-only packages, all pulled in by approved tools and none shipped in the
 dashboard bundle, have licences that are free and permissive but are not named
 in the licence rule. They are kept for now and listed here for the author's
 decision:
@@ -310,6 +314,7 @@ unmodified.
 | @napi-rs/wasm-runtime | 1.2.2 | dev (optional) | MIT | allowed |
 | @napi-rs/wasm-runtime | 1.2.6 | dev (optional) | MIT | allowed |
 | @oxc-project/types | 0.156.0 | dev | MIT | allowed |
+| @playwright/test | 1.65.1 | dev | Apache-2.0 | allowed |
 | @rolldown/binding-android-arm-eabi | 1.2.19 | dev (optional) | MIT | allowed |
 | @rolldown/binding-android-arm64 | 1.2.19 | dev (optional) | MIT | allowed |
 | @rolldown/binding-darwin-arm64 | 1.2.19 | dev (optional) | MIT | allowed |
@@ -475,6 +480,8 @@ unmodified.
 | path-key | 3.1.1 | dev | MIT | allowed |
 | picocolors | 1.1.1 | dev | ISC | allowed |
 | picomatch | 4.0.7 | dev | MIT | allowed |
+| playwright | 1.65.1 | dev | Apache-2.0 | allowed |
+| playwright-core | 1.65.1 | dev | Apache-2.0 | allowed |
 | plotly.js-dist-min | 4.3.0 | runtime | MIT | allowed |
 | postcss | 8.5.33 | dev | MIT | allowed |
 | prelude-ls | 1.2.1 | dev | MIT | allowed |

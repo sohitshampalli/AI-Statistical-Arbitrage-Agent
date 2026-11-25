@@ -9,4 +9,9 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 /design/inspiration/
-/reports/runs/
+# Run artifacts and anything else derived from downloaded prices stay on this
+# computer. Only the dashboard screenshots chosen for the README are committed;
+# layout checks at other widths are kept local.
+/reports/*
+!/reports/screenshots/
+/reports/screenshots/layout-checks/
